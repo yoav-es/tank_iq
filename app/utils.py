@@ -1,77 +1,79 @@
 # app/utils.py
 
-from typing import Dict, Union
-# Import the database function to fetch the raw data
-from app import database 
+from typing import Dict, Any, List
+from decimal import Decimal, ROUND_HALF_UP 
 
-# --- Constants ---
-LITERS_KEY = 'liters'
-PRICE_KEY = 'price_per_liter'
-DISTANCE_KEY = 'distance'
-
-# --- Core Calculations ---
-
-def calculate_l_per_km(liters: float, distance_km: float) -> float:
-    """
-    Calculates fuel efficiency in Liters per Kilometer (L/km).
-
-    Args:
-        liters (float): The amount of fuel used.
-        distance_km (float): The distance traveled in kilometers.
-
-    Returns:
-        float: Fuel efficiency (L/km) rounded to 6 decimal places. Returns 0.0 if distance is zero or negative.
-    """
-    if distance_km <= 0:
+def calculate_l_per_km(liters: float, distance: float) -> float:
+    """Calculates fuel efficiency in Liters per Kilometer (L/km), rounded to 2 decimal places."""
+    if distance <= 0:
         return 0.0
-    # maybe allow switching 
-    # Formula: Liters / Distance in km
-    efficiency = liters / distance_km
-    # Using 6 decimal places to maintain precision for a small value like L/km
-    return round(efficiency, 6)
-
-
-def get_overall_stats() -> Dict[str, Union[float, int]]:
-    """
-    Calculates and returns overall aggregated fuel statistics from all entries.
-
-    Metrics include total consumption, total cost, and overall average efficiency (L/km).
-
-    Returns:
-        Dict[str, Union[float, int]]: A dictionary containing key metrics.
-    """
-    # 1. Fetch raw data (list of sqlite3.Row objects)
-    entries = database.list_entries()
     
+    efficiency = liters / distance
+    return round(efficiency, 2)
+
+def calculate_total_cost(liters: float, price_per_liter: float) -> float:
+    """
+    Calculates the total cost of a fuel entry using the Decimal module for guaranteed 
+    2-decimal precision (currency).
+    """
+    # Convert float inputs to Decimal using str() for accurate representation
+    liters_dec = Decimal(str(liters))
+    price_dec = Decimal(str(price_per_liter))
+    
+    # Perform multiplication
+    total_cost_dec = liters_dec * price_dec
+    
+    # Round to 2 decimal places (cents)
+    rounded_cost_dec = total_cost_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    
+    # Convert back to float for API response consistency
+    return float(rounded_cost_dec)
+
+def calculate_entry_stats(liters: float, price_per_liter: float, distance: float) -> Dict[str, Any]:
+    """Helper to calculate all derived fields for a single entry."""
+    return {
+        "l_per_km": calculate_l_per_km(liters, distance),
+        "total_cost": calculate_total_cost(liters, price_per_liter)
+    }
+
+def get_overall_stats(entries: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Calculates overall statistics (total distance, total liters, total cost, average consumption) 
+    from a list of raw entry dictionaries returned by the database.
+    """
     if not entries:
         return {
-            "total_entries": 0,
             "total_distance_km": 0.0,
             "total_liters": 0.0,
             "total_cost": 0.0,
-            "avg_price_per_liter": 0.0,
-            "overall_l_per_km": 0.0  # Renamed key
+            "average_l_per_100km": 0.0
         }
 
-    # 2. Aggregate raw data
-    total_liters = sum(e[LITERS_KEY] for e in entries)
-    total_distance_km = sum(e[DISTANCE_KEY] for e in entries)
-    total_cost = sum(e[LITERS_KEY] * e[PRICE_KEY] for e in entries)
+    total_liters = sum(e['liters'] for e in entries)
+    total_distance_km = sum(e['distance'] for e in entries)
     
-    # 3. Calculate derived stats
+    # Perform cost aggregation using Decimal for precision (best practice)
+    # 🛑 FIX: Use start=Decimal(0) to ensure the result is always a Decimal, avoiding the quantize error.
+    total_cost_dec = sum((
+            Decimal(str(e['liters'])) * Decimal(str(e['price_per_liter'])) 
+            for e in entries
+        ), start=Decimal(0)) # <--- SYNTAX FIXED
     
-    # Calculate weighted average price per liter (Total Cost / Total Liters)
-    avg_price_per_liter = total_cost / total_liters if total_liters >0 else 0.0
+    # Round the total cost down to 2 decimals for output
+    total_cost = float(total_cost_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+    
+    
+    # Calculate average consumption (L/100km)
+    if total_distance_km > 0:
+        # L/100km calculation and rounding to 2 decimal places
+        average_l_per_100km = (total_liters / total_distance_km) * 100
+        average_l_per_100km = round(average_l_per_100km, 2)
+    else:
+        average_l_per_100km = 0.0
 
-    # Calculate overall fuel efficiency using the L/km function
-    overall_l_per_km = calculate_l_per_km(total_liters, total_distance_km)
-
-    # 4. Return results
     return {
-        "total_entries": len(entries),
-        "total_distance_km": round(total_distance_km, 2),
+        "total_distance_km": round(total_distance_km, 1), # Keep distance at 1 decimal place
         "total_liters": round(total_liters, 2),
-        "total_cost": round(total_cost, 2),
-        "avg_price_per_liter": round(avg_price_per_liter, 4),
-        "overall_l_per_km": overall_l_per_km, # Updated key and value
+        "total_cost": total_cost,
+        "average_l_per_100km": average_l_per_100km
     }

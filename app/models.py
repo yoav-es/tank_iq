@@ -1,63 +1,44 @@
-# models.py
+# app/models.py
 
-class FuelEntry:
+from pydantic import BaseModel, field_validator, ConfigDict # <-- UPDATED IMPORT: ConfigDict
+from typing import Optional
+from datetime import date
+
+# --- 1. Base Model (Shared Fields) ---
+class FuelEntryBase(BaseModel):
+    """Base model containing fields common to all entries."""
+    date: str
+    liters: float
+    price_per_liter: float
+    distance: float
+    notes: Optional[str] = None
+    
+    # Validation to ensure the date is in the correct format
+    @field_validator('date')
+    @classmethod
+    def validate_date_format(cls, v: str) -> str:
+        try:
+            date.fromisoformat(v)
+            return v
+        except ValueError:
+            raise ValueError("Date must be in YYYY-MM-DD format.")
+
+# --- 2. Input/Create Model (For POST/PUT Requests) ---
+class FuelEntryCreate(FuelEntryBase):
+    """Schema for receiving new data from a POST/PUT request."""
+    pass
+
+# --- 3. Database/Output Model (For GET Responses) ---
+class FuelEntryDB(FuelEntryBase):
     """
-    Represents a single fuel entry for a vehicle.
-
-    Attributes:
-        date (str): The date of the fuel entry in YYYY-MM-DD format.
-        liters (float): The amount of fuel filled in liters.
-        price_per_liter (float): The price paid per liter of fuel.
-        distance (float): Distance driven since last refuel, in kilometers.
-        notes (str): Optional notes about the entry.
+    Schema for data retrieved from the database and sent as a response.
+    Includes the database ID and calculated properties.
     """
+    id: int
+    total_cost: float
+    l_per_km: float
 
-    def __init__(self, date, liters, price_per_liter, distance, notes=""):
-        """
-        Initializes a new FuelEntry instance.
-
-        Args:
-            date (str): Date of the entry (YYYY-MM-DD).
-            liters (float): Liters of fuel filled.
-            price_per_liter (float): Price per liter.
-            distance (float): Distance driven since last refuel (in km).
-            notes (str, optional): Additional notes. Defaults to "".
-        """
-        self.date = date
-        self.liters = liters
-        self.price_per_liter = price_per_liter
-        self.distance = distance
-        self.notes = notes
-        
-    @property
-    def l_per_km(self) -> float:
-        """
-        Calculates the fuel efficiency in Liters per Kilometer (L/km).
-        This is necessary for unit testing the model.
-        """
-        if self.distance <= 0:
-            return 0.0
-        
-        # Formula: Liters / Distance in km
-        efficiency = self.liters / self.distance
-        # Using 6 decimal places for precision in L/km
-        return round(efficiency, 6)
-
-    @property
-    def total_cost(self):
-        """
-        Calculates the total cost of the fuel entry.
-
-        Returns:
-            float: Total cost (liters × price_per_liter), rounded to 2 decimal places.
-        """
-        return round(self.liters * self.price_per_liter, 2)
-
-    @property
-    def fuel_consumption(self):
-        """
-        Calculates fuel consumption in liters per km.
-        """
-        if self.distance == 0:
-            return 0.0
-        return round(self.liters / self.distance, 4)
+    # --- REPLACED: Use model_config (ConfigDict) to eliminate Pydantic V2 warning ---
+    model_config = ConfigDict(
+        from_attributes=True # This replaces the old Config.from_attributes = True
+    )
