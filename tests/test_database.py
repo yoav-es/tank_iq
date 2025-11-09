@@ -1,139 +1,148 @@
 # tests/test_database.py
 
 import pytest
+import os
 import sqlite3
-import unittest.mock
-from faker import Faker
-# Import the actual application modules
-from app import database
-# Import Pydantic models for testing the interface
-from app.models import FuelEntryCreate, FuelEntryDB 
+# Added FuelEntryUpdate to fix the Pylance error
+from app.models import FuelEntryCreate, FuelEntryDB, FuelEntryUpdate 
+from app.database import (
+    init_db,
+    insert_entry,
+    read_entry,
+    update_entry,
+    delete_entry,
+    get_all_entries_raw,
+    get_all_entries_processed,
+    DATABASE_NAME
+)
 
-# Initialize Faker for generating realistic test data
-fake = Faker()
+# --- Shared Test Data ---
 
-# Helper function to generate unique test data (RETURNS PYDANTIC MODEL)
-def _create_fake_entry() -> FuelEntryCreate: # <-- RENAMED
-    """Generates a realistic, random FuelEntryCreate instance."""
-    return FuelEntryCreate(
-        date=fake.date_between(start_date='-1y', end_date='today').isoformat(),
-        liters=fake.pyfloat(left_digits=2, right_digits=2, positive=True, min_value=10, max_value=80),
-        price_per_liter=fake.pyfloat(left_digits=1, right_digits=3, positive=True, min_value=1.0, max_value=2.5),
-        distance=fake.pyfloat(left_digits=3, right_digits=1, positive=True, min_value=100, max_value=800),
-        notes=fake.sentence(nb_words=5) if fake.boolean(chance_of_getting_true=50) else None
-    )
+VALID_CREATE_DATA = FuelEntryCreate(
+    date="2024-10-25",
+    liters=50.5,
+    price_per_liter=1.55,
+    distance=450.0,
+    notes="Highway driving"
+)
 
-# --- Fixture to handle in-memory database setup ---
+ANOTHER_CREATE_DATA = FuelEntryCreate(
+    date="2024-10-26",
+    liters=45.6,
+    price_per_liter=1.50,
+    distance=785.0,
+    notes="Commuting"
+)
 
-@pytest.fixture
-def clean_db(mocker):
-    """
-    Mocks the get_db context manager to use an in-memory database (:memory:).
-    This setup prevents external files/locks and minimizes the connection closure issue
-    by controlling the lifecycle.
-    """
-    # 1. Create the in-memory connection
-    conn = sqlite3.connect(':memory:')
-    conn.row_factory = sqlite3.Row
-    
-    # 2. Mock the logger dependency (if present, harmless if not)
-    try:
-        mocker.patch('app.logger')
-    except AttributeError:
-        pass
+# --- Fixtures and Setup ---
 
-    # 3. Initialize the database schema on the temporary connection
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS fuel_entries (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            date TEXT NOT NULL,
-            liters REAL NOT NULL,
-            price_per_liter REAL NOT NULL,
-            distance REAL NOT NULL,
-            notes TEXT
-        )
-    """)
+@pytest.fixture(scope="session", autouse=True)
+def setup_teardown_db():
+    """Fixture to ensure a fresh, empty database for testing."""
+    init_db()
+    yield
+    if os.path.exists(DATABASE_NAME):
+        os.remove(DATABASE_NAME)
+
+@pytest.fixture(autouse=True)
+def clean_db():
+    """Fixture to clear the table before each individual test."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    conn.execute("DELETE FROM fuel_entries")
     conn.commit()
-
-    # 4. Mock the app.database.get_db() function
-    mocker.patch('app.database.get_db', 
-                 return_value=unittest.mock.MagicMock(
-                     # When 'with get_db()' is entered, return the open connection
-                     __enter__=lambda self: conn, 
-                     # When 'with get_db()' is exited, do nothing (preventing conn.close() from running)
-                     __exit__=lambda self, *args: None
-                 ))
-    
-    yield conn
-    
-    # 5. Ensure the connection is closed after the entire test suite finishes
     conn.close()
 
-# --- CRUD Tests ---
+# --- Tests ---
 
-def test_insert_and_list_multiple(clean_db):
-    """Tests inserting multiple entries and verifying the count and data types."""
-    num_entries = 4
+def test_insert_and_read_entry():
+    """Tests inserting an entry and retrieving it with calculated fields."""
     
-    for _ in range(num_entries):
-        database.insert_entry(_create_fake_entry()) # <-- CALL UPDATED
+    inserted_entry = insert_entry(VALID_CREATE_DATA)
+    assert inserted_entry is not None
+    assert inserted_entry.id is not None
     
-    entries = database.list_entries()
+    retrieved_entry = read_entry(inserted_entry.id)
+    assert retrieved_entry is not None
     
-    assert len(entries) == num_entries
-    assert isinstance(entries, list)
-    assert all(isinstance(e, dict) for e in entries)
+    assert retrieved_entry.liters == 50.5
+    assert retrieved_entry.distance == 450.0
+    assert round(retrieved_entry.total_cost, 2) == 78.28
+    assert round(retrieved_entry.km_per_liter, 2) == 8.91
+    
+    assert isinstance(retrieved_entry, FuelEntryDB)
 
-def test_read_entry_exists(clean_db):
-    """Tests retrieving a single entry by ID."""
-    original_entry = _create_fake_entry() # <-- CALL UPDATED
-    original_entry.liters = 55.5
-    
-    new_id = database.insert_entry(original_entry)
+def test_read_nonexistent_entry():
+    """Tests attempting to read an ID that does not exist."""
+    assert read_entry(999) is None
 
-    assert new_id is not None
-    
-    retrieved = database.read_entry(new_id)
-    
-    assert retrieved is not None
-    assert isinstance(retrieved, FuelEntryDB)
-    assert retrieved.liters == 55.5
-    assert retrieved.total_cost == round(original_entry.liters * original_entry.price_per_liter, 2)
-    
-
-def test_read_entry_not_exists(clean_db):
-    """Tests that attempting to read a non-existent ID returns None."""
-    retrieved = database.read_entry(99999)
-    assert retrieved is None
-
-def test_update_entry(clean_db):
+def test_update_entry():
     """Tests updating an existing entry."""
-    entry_id = database.insert_entry(_create_fake_entry()) # <-- CALL UPDATED
-    assert entry_id is not None
     
-    # Create new Pydantic model for the update
-    updated_entry = _create_fake_entry() # <-- CALL UPDATED
-    updated_entry.liters = 100.0 
-    updated_entry.notes = "Updated Test Note"
+    original_entry = insert_entry(VALID_CREATE_DATA)
+    assert original_entry is not None
     
-    success = database.update_entry(entry_id, updated_entry)
+    # 2. Define update data (FIX: Must use FuelEntryUpdate, not FuelEntryCreate)
+    update_data = FuelEntryUpdate(
+        date="2025-01-01",
+        liters=60.0,
+        price_per_liter=2.0,
+        distance=600.0,
+        notes="Updated notes"
+    )
+    
+    # 3. Update the entry
+    updated_entry = update_entry(original_entry.id, update_data)
+    assert updated_entry is not None
+    
+    # 4. Verify updated fields and new calculations
+    assert updated_entry.id == original_entry.id
+    assert updated_entry.liters == 60.0
+    assert updated_entry.date == "2025-01-01"
+    assert updated_entry.total_cost == 120.0
+    assert updated_entry.km_per_liter == 10.0
+
+def test_delete_entry():
+    """Tests deleting an existing entry."""
+    
+    inserted_entry = insert_entry(VALID_CREATE_DATA)
+    assert inserted_entry is not None
+    
+    success = delete_entry(inserted_entry.id)
     assert success is True
     
-    # Verify the update by reading the entry back
-    retrieved = database.read_entry(entry_id)
+    assert read_entry(inserted_entry.id) is None
+
+def test_delete_nonexistent_entry():
+    """Tests attempting to delete a non-existent entry."""
+    assert delete_entry(999) is False
+
+def test_insert_and_list_multiple():
+    """
+    Tests inserting multiple entries and retrieving them all 
+    using the new processed list function.
+    """
     
-    assert retrieved is not None
-    assert retrieved.liters == 100.0
-    assert retrieved.notes == "Updated Test Note"
+    insert_entry(VALID_CREATE_DATA)
+    insert_entry(ANOTHER_CREATE_DATA)
     
-def test_delete_entry(clean_db):
-    """Tests successful deletion and handles attempts to delete non-existent IDs."""
-    entry_id = database.insert_entry(_create_fake_entry()) # <-- CALL UPDATED
-    assert entry_id is not None
+    # List the processed entries (Calls the correct new function)
+    entries = get_all_entries_processed() 
     
-    # Test successful deletion
-    assert database.delete_entry(entry_id) is True
-    assert database.read_entry(entry_id) is None
+    assert len(entries) == 2
     
-    # Test deleting a non-existent ID
-    assert database.delete_entry(entry_id + 100) is False
+    # Entry 2: (45.6L, 785km) -> km/L = 17.22
+    entry_a = entries[0]
+    assert entry_a.distance == 785.0
+    assert round(entry_a.km_per_liter, 2) == 17.21
+    assert isinstance(entry_a, FuelEntryDB)
+
+    # Entry 1: (50.5L, 450km) -> km/L = 8.91
+    entry_b = entries[1]
+    assert entry_b.distance == 450.0
+    assert round(entry_b.km_per_liter, 2) == 8.91
+    assert isinstance(entry_b, FuelEntryDB)
+
+def test_get_all_entries_raw():
+    """Tests the helper function used for overall stats calculation."""
+    insert_entry(VALID_CREATE_DATA)
+    insert_entry(ANOTHER_CREATE_DATA)

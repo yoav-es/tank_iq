@@ -1,7 +1,5 @@
-# app/models.py
-
-from pydantic import BaseModel, field_validator, ConfigDict # <-- UPDATED IMPORT: ConfigDict
-from typing import Optional
+from pydantic import BaseModel, field_validator, ConfigDict
+from typing import Optional, List # List is now imported
 from datetime import date
 
 # --- 1. Base Model (Shared Fields) ---
@@ -28,6 +26,10 @@ class FuelEntryCreate(FuelEntryBase):
     """Schema for receiving new data from a POST/PUT request."""
     pass
 
+class FuelEntryUpdate(FuelEntryBase):
+    """Schema for updating an existing entry."""
+    pass
+
 # --- 3. Database/Output Model (For GET Responses) ---
 class FuelEntryDB(FuelEntryBase):
     """
@@ -36,9 +38,29 @@ class FuelEntryDB(FuelEntryBase):
     """
     id: int
     total_cost: float
-    l_per_km: float
+    km_per_liter: float
 
-    # --- REPLACED: Use model_config (ConfigDict) to eliminate Pydantic V2 warning ---
     model_config = ConfigDict(
-        from_attributes=True # This replaces the old Config.from_attributes = True
+        from_attributes=True
     )
+
+# --- 4. Overall Stats Model ---
+class OverallStats(BaseModel):
+    """
+    Schema for overall calculated statistics across all entries.
+    """
+    total_distance: float
+    total_liters: float
+    total_cost: float
+    entry_count: int
+    # RENAMED: from average_l_per_100km to average_km_per_liter
+    average_km_per_liter: float 
+
+# --- 5. List Response Model ---
+class EntryList(BaseModel):
+    """
+    The full response schema for the GET /entries endpoint.
+    Contains the list of individual entries and the overall statistics.
+    """
+    entries: List[FuelEntryDB]
+    overall_stats: OverallStats

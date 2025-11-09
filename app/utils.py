@@ -1,79 +1,48 @@
 # app/utils.py
 
-from typing import Dict, Any, List
-from decimal import Decimal, ROUND_HALF_UP 
+from typing import List, Dict, Any
+from .models import OverallStats # Import the model for correct type hinting
 
-def calculate_l_per_km(liters: float, distance: float) -> float:
-    """Calculates fuel efficiency in Liters per Kilometer (L/km), rounded to 2 decimal places."""
-    if distance <= 0:
-        return 0.0
+def calculate_entry_stats(liters: float, price_per_liter: float, distance: float) -> Dict[str, float]:
+    """Calculates total cost and km/liter for a single entry."""
+    total_cost = liters * price_per_liter
     
-    efficiency = liters / distance
-    return round(efficiency, 2)
-
-def calculate_total_cost(liters: float, price_per_liter: float) -> float:
-    """
-    Calculates the total cost of a fuel entry using the Decimal module for guaranteed 
-    2-decimal precision (currency).
-    """
-    # Convert float inputs to Decimal using str() for accurate representation
-    liters_dec = Decimal(str(liters))
-    price_dec = Decimal(str(price_per_liter))
-    
-    # Perform multiplication
-    total_cost_dec = liters_dec * price_dec
-    
-    # Round to 2 decimal places (cents)
-    rounded_cost_dec = total_cost_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-    
-    # Convert back to float for API response consistency
-    return float(rounded_cost_dec)
-
-def calculate_entry_stats(liters: float, price_per_liter: float, distance: float) -> Dict[str, Any]:
-    """Helper to calculate all derived fields for a single entry."""
-    return {
-        "l_per_km": calculate_l_per_km(liters, distance),
-        "total_cost": calculate_total_cost(liters, price_per_liter)
-    }
-
-def get_overall_stats(entries: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """
-    Calculates overall statistics (total distance, total liters, total cost, average consumption) 
-    from a list of raw entry dictionaries returned by the database.
-    """
-    if not entries:
-        return {
-            "total_distance_km": 0.0,
-            "total_liters": 0.0,
-            "total_cost": 0.0,
-            "average_l_per_100km": 0.0
-        }
-
-    total_liters = sum(e['liters'] for e in entries)
-    total_distance_km = sum(e['distance'] for e in entries)
-    
-    # Perform cost aggregation using Decimal for precision (best practice)
-    # 🛑 FIX: Use start=Decimal(0) to ensure the result is always a Decimal, avoiding the quantize error.
-    total_cost_dec = sum((
-            Decimal(str(e['liters'])) * Decimal(str(e['price_per_liter'])) 
-            for e in entries
-        ), start=Decimal(0)) # <--- SYNTAX FIXED
-    
-    # Round the total cost down to 2 decimals for output
-    total_cost = float(total_cost_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
-    
-    
-    # Calculate average consumption (L/100km)
-    if total_distance_km > 0:
-        # L/100km calculation and rounding to 2 decimal places
-        average_l_per_100km = (total_liters / total_distance_km) * 100
-        average_l_per_100km = round(average_l_per_100km, 2)
+    # Calculate km_per_liter (km/L)
+    if liters > 0:
+        km_per_liter = distance / liters
     else:
-        average_l_per_100km = 0.0
-
+        km_per_liter = 0.0
+        
     return {
-        "total_distance_km": round(total_distance_km, 1), # Keep distance at 1 decimal place
-        "total_liters": round(total_liters, 2),
-        "total_cost": total_cost,
-        "average_l_per_100km": average_l_per_100km
+        "total_cost": round(total_cost, 2),
+        "km_per_liter": round(km_per_liter, 2)
     }
+
+def get_overall_stats(entries: List[Dict[str, Any]]) -> OverallStats:
+    """Calculates overall statistics, including average km/liter."""
+    
+    # 1. Initialize cumulative totals
+    total_distance = sum(entry['distance'] for entry in entries)
+    total_liters = sum(entry['liters'] for entry in entries)
+    total_cost = sum(entry['liters'] * entry['price_per_liter'] for entry in entries)
+    entry_count = len(entries)
+    
+    # 2. Calculate average km/liter
+    if total_liters > 0:
+        # Average km/liter is total distance divided by total liters
+        average_km_per_liter = total_distance / total_liters
+    else:
+        average_km_per_liter = 0.0
+    
+    # 3. Return the OverallStats model, ensuring correct field names
+    stats_data = {
+        "total_distance": round(total_distance, 2),
+        "total_liters": round(total_liters, 2),
+        "total_cost": round(total_cost, 2),
+        "entry_count": entry_count,
+        # FINAL METRIC FIX: Only use the requested average_km_per_liter key
+        "average_km_per_liter": round(average_km_per_liter, 2),
+    }
+
+    # Validate and return the Pydantic model
+    return OverallStats.model_validate(stats_data)

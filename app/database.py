@@ -4,9 +4,9 @@ import sqlite3
 from typing import Optional, Generator, List, Dict, Any
 from contextlib import contextmanager
 
-# Import the necessary local modules
-from .models import FuelEntryCreate, FuelEntryDB 
-from .utils import calculate_entry_stats # Used to populate derived fields
+# Import the necessary local modules and FuelEntryUpdate
+from .models import FuelEntryCreate, FuelEntryDB, FuelEntryUpdate, OverallStats 
+from .utils import calculate_entry_stats, get_overall_stats
 
 DATABASE_NAME = "fuel_log.db"
 
@@ -49,26 +49,7 @@ def init_db() -> None:
         # Pass silently during testing/init phase
         pass
 
-# --- 2. CRUD Operations ---
-
-def insert_entry(entry: FuelEntryCreate) -> Optional[int]:
-    """Inserts a new FuelEntry object into the database."""
-    try:
-        with get_db() as conn:
-            cursor = conn.cursor()
-            
-            cursor.execute(
-                """
-                INSERT INTO fuel_entries (date, liters, price_per_liter, distance, notes)
-                VALUES (?, ?, ?, ?, ?)
-                """,
-                # Access Pydantic data using dot notation
-                (entry.date, entry.liters, entry.price_per_liter, entry.distance, entry.notes)
-            )
-            conn.commit()
-            return cursor.lastrowid
-    except sqlite3.Error:
-        return None
+# --- 2. Helper ---
 
 def _row_to_fuel_entry_db(row: sqlite3.Row) -> FuelEntryDB:
     """Helper to convert a sqlite3.Row into the Pydantic FuelEntryDB model."""
@@ -83,6 +64,34 @@ def _row_to_fuel_entry_db(row: sqlite3.Row) -> FuelEntryDB:
     full_data = {**entry_dict, **stats}
     return FuelEntryDB.model_validate(full_data)
 
+# --- 3. CRUD Operations ---
+
+def insert_entry(entry: FuelEntryCreate) -> Optional[FuelEntryDB]:
+    """Inserts a new FuelEntry object into the database and returns the created entry."""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            cursor.execute(
+                """
+                INSERT INTO fuel_entries (date, liters, price_per_liter, distance, notes)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (entry.date, entry.liters, entry.price_per_liter, entry.distance, entry.notes)
+            )
+            conn.commit()
+            new_id = cursor.lastrowid
+            
+            # Read the newly inserted row to get all fields and return the model
+            row = conn.execute("SELECT * FROM fuel_entries WHERE id = ?", (new_id,)).fetchone()
+            
+            if row:
+                return _row_to_fuel_entry_db(row)
+            return None
+            
+    except sqlite3.Error:
+        return None
+
 def read_entry(entry_id: int) -> Optional[FuelEntryDB]:
     """Retrieves a single entry by ID and converts it to FuelEntryDB."""
     with get_db() as conn:
@@ -94,14 +103,25 @@ def read_entry(entry_id: int) -> Optional[FuelEntryDB]:
             
         return None
 
-def list_entries() -> List[Dict[str, Any]]:
-    """Retrieves all entries from the database, returning raw dicts/Rows."""
+# Retrieves raw entries for overall statistics calculation
+def get_all_entries_raw() -> List[Dict[str, Any]]:
+    """Retrieves all entries from the database, returning raw dictionaries."""
     with get_db() as conn:
         rows = conn.execute("SELECT * FROM fuel_entries ORDER BY date DESC").fetchall()
         return [dict(row) for row in rows] 
 
-def update_entry(entry_id: int, entry: FuelEntryCreate) -> bool:
-    """Updates an existing entry based on its ID."""
+# Retrieves processed entries for the response body
+def get_all_entries_processed() -> List[FuelEntryDB]:
+    """Retrieves all entries, calculates derived fields, and returns FuelEntryDB models."""
+    with get_db() as conn:
+        rows = conn.execute("SELECT * FROM fuel_entries ORDER BY date DESC").fetchall()
+        # CRITICAL FIX: Process every row using the helper function
+        return [_row_to_fuel_entry_db(row) for row in rows]
+
+# FIX: Changed the parameter type from FuelEntryCreate to FuelEntryUpdate
+def update_entry(entry_id: int, entry: FuelEntryUpdate) -> Optional[FuelEntryDB]:
+    """Updates an existing entry based on its ID and returns the updated entry."""
+    row_count = 0
     try:
         with get_db() as conn:
             cursor = conn.cursor()
@@ -114,9 +134,15 @@ def update_entry(entry_id: int, entry: FuelEntryCreate) -> bool:
                 (entry.date, entry.liters, entry.price_per_liter, entry.distance, entry.notes, entry_id)
             )
             conn.commit()
-            return cursor.rowcount > 0
+            row_count = cursor.rowcount
+            
     except sqlite3.Error:
-        return False
+        return None
+
+    # Read and return the updated entry only if the update was successful
+    if row_count > 0:
+        return read_entry(entry_id) # Uses a new connection via read_entry
+    return None
 
 def delete_entry(entry_id: int) -> bool:
     """Deletes an entry by ID."""
