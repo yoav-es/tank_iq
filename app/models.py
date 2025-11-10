@@ -1,5 +1,5 @@
 from pydantic import BaseModel, field_validator, ConfigDict
-from typing import Optional, List # List is now imported
+from typing import Optional, List 
 from datetime import date
 
 # --- 1. Base Model (Shared Fields) ---
@@ -21,16 +21,16 @@ class FuelEntryBase(BaseModel):
         except ValueError:
             raise ValueError("Date must be in YYYY-MM-DD format.")
 
-# --- 2. Input/Create Model (For POST/PUT Requests) ---
+# --- 2. Input/Create/Update Models ---
 class FuelEntryCreate(FuelEntryBase):
-    """Schema for receiving new data from a POST/PUT request."""
+    """Schema for receiving new data from a POST request."""
     pass
 
 class FuelEntryUpdate(FuelEntryBase):
     """Schema for updating an existing entry."""
     pass
 
-# --- 3. Database/Output Model (For GET Responses) ---
+# --- 3. Database/Output Model (Includes Calculated Fields) ---
 class FuelEntryDB(FuelEntryBase):
     """
     Schema for data retrieved from the database and sent as a response.
@@ -44,7 +44,7 @@ class FuelEntryDB(FuelEntryBase):
         from_attributes=True
     )
 
-# --- 4. Overall Stats Model ---
+# --- 4. Overall Stats Model (FIXED) ---
 class OverallStats(BaseModel):
     """
     Schema for overall calculated statistics across all entries.
@@ -53,10 +53,34 @@ class OverallStats(BaseModel):
     total_liters: float
     total_cost: float
     entry_count: int
-    # RENAMED: from average_l_per_100km to average_km_per_liter
     average_km_per_liter: float 
+    average_cost_per_liter: float # <--- This field resolves the error
+# --- 5. Time Period Stats Model (For Monthly/Yearly Aggregation) ---
 
-# --- 5. List Response Model ---
+class TimePeriodStats(BaseModel):
+    """
+    Schema for aggregated statistics over a specific time period (e.g., month or year).
+    """
+    period_label: str # e.g., "2024-07" or "2023"
+    total_liters: float
+    total_cost: float
+    total_distance: float
+    count: int # Number of fills in this period
+    average_km_per_liter: float
+    average_cost_per_liter: float 
+
+# --- 6. Detailed Stats Response Model ---
+
+class DetailedStats(BaseModel):
+    """
+    The comprehensive response model for the GET /stats/ endpoint, 
+    combining overall, monthly, and yearly aggregations.
+    """
+    overall_stats: OverallStats
+    monthly_stats: List[TimePeriodStats]
+    yearly_stats: List[TimePeriodStats]
+
+# --- 7. List Response Model ---
 class EntryList(BaseModel):
     """
     The full response schema for the GET /entries endpoint.

@@ -1,9 +1,10 @@
-# app/server.py
 import logging
 from fastapi import FastAPI
-from app.api import router
+from fastapi.middleware.cors import CORSMiddleware
+# 🛑 CRITICAL FIX: Use an alias to safely import the router module
+import app.api as api_module
 from app.database import init_db
-from contextlib import asynccontextmanager # 🛑 NEW IMPORT
+from contextlib import asynccontextmanager 
 
 # --- 🛑 LOGGING CONFIGURATION (Runs first) ---
 # Set the global logging level and format.
@@ -19,7 +20,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Handles startup and shutdown events."""
     # --- STARTUP EVENT (Runs before the app starts serving) ---
-    logger.info("Application starting up...") # 🛑 LOGGING
+    logger.info("Application starting up...") 
     logger.info("Initializing database...")
     init_db() 
     logger.info("Database initialization complete.")
@@ -28,8 +29,7 @@ async def lifespan(app: FastAPI):
     yield 
     
     # --- SHUTDOWN EVENT (Runs when the app shuts down) ---
-    # Any necessary cleanup goes here (e.g., closing a connection pool)
-    logger.info("Application shutting down.") # 🛑 LOGGING
+    logger.info("Application shutting down.") 
     pass
 
 
@@ -38,8 +38,22 @@ app = FastAPI(
     title="TankIQ Fuel Tracker API",
     description="API for tracking vehicle fuel consumption and calculating statistics.",
     version="1.0.0",
-    lifespan=lifespan  # 🛑 PASS THE HANDLER
+    lifespan=lifespan 
 )
 
+# --- CORS MIDDLEWARE ---
+origins = [
+    "*", 
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
 # Include the Router
-app.include_router(router)
+# 🛑 CRITICAL FIX: Reference the router via the imported alias
+app.include_router(api_module.router)
