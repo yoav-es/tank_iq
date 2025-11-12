@@ -59,3 +59,37 @@ This table defines the exact visual states and necessary feedback mechanisms in 
 | **3. Update Entry (via Edit)** | **Entry Form** (pre-filled with data). | User modifies fields and clicks **"Update Entry."** | Form is **replaced** by a non-blocking **Feedback Modal** (OK or Error). After dismissal, the user returns to the **Entry List**. |
 | **4. Delete Entry** | **Confirmation Modal** is displayed. | User confirms deletion. | Modal is **replaced** by a non-blocking **Feedback Modal** (OK or Error). After dismissal, the user returns to the **Entry List**. |
 | **5. View Statistics (Read/Analyze)** | **Filter Form** is displayed. | User selects dates and clicks **"Generate Report."** | Filter Form is **replaced** by a **Loading Spinner** $\rightarrow$ which is then replaced by the **Statistics Dashboard** (Charts/Metrics). |
+
+
++------------------------------------------------------------------------------------------------+
+|                                  USER BROWSER (THE CLIENT)                                     |
+|                                                                                                |
+| +-------------------------+     +--------------------------+     +--------------------------+  |
+| | A. PRESENTATION LAYER   | <-> | B. APPLICATION LOGIC     | <-> | C. API CLIENT (JavaScript) |  |
+| | (HTML, JS DOM Events)   |     | (State Management, View) |     | (fetch API calls)        |  |
+| +-------------------------+     +--------------------------+     +--------------------------+  |
+|             |                                                                |
+|             |                                                                |
+|             | (User Interaction/Events)                                      | (D: HTTP/JSON Requests)
+|             V                                                                V
++------------------------------------------------------------------------------------------------+
+                                       |
+                                       | (Network Boundary)
+                                       V
++------------------------------------------------------------------------------------------------+
+|                                   DEDICATED BACKEND SERVER (HOSTED)                            |
+|                                                                                                |
+|                           +--------------------------------------------------+                 |
+|                           | D. BACKEND FRAMEWORK                             |                 |
+|                           | (Python: FastAPI Application)                    |                 |
+|                           | - Defines API endpoints (/entries, /stats)       |                 |
+|                           | - Contains Business Logic (Data validation, math)|                 |
+|                           +--------------------------------------------------+                 |
+|                                                     |
+|                                                     | (SQL Queries)
+|                                                     V
+|                           +--------------------------------------------------+                 |
+|                           | E. DATABASE (Storage Layer)                      |                 |
+|                           | (SQLite File via a Python ORM)                   |                 |
+|                           +--------------------------------------------------+                 |
++------------------------------------------------------------------------------------------------+
