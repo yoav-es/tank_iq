@@ -4,7 +4,7 @@
 
 // --- 1. Base Model (Shared Fields) ---
 export interface FuelEntryBase {
-  date: string; // YYYY-MM-DD format
+  date: string | null; // YYYY-MM-DD format
   liters: number;
   price_per_liter: number;
   distance: number;
@@ -61,3 +61,4 @@ export interface EntryListResponse {
   entries: FuelEntryDB[];
   overall_stats: OverallStats;
 }
+

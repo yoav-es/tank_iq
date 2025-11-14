@@ -1,34 +1,16 @@
-// ui/tsconfig.json
-
 {
   "compilerOptions": {
-    /* Base Options */
-    "target": "es2020", 
-    "module": "esnext",
-    
-    /* CRITICAL: Includes types for Promise, async/await, and browser APIs (fetch) */
-    "lib": ["es2020", "dom", "dom.iterable"], 
-    
-    /* ******** FIX IS HERE ********** */
-    "moduleResolution": "bundler", 
-    /* ******************************* */
-
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Node",
     "strict": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true,
-    
-    /* Vue/Vite Specifics */
     "jsx": "preserve",
-    "allowJs": true,
-    "isolatedModules": true,
-    
-    /* Path Aliases (if needed, but kept generic here) */
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"]
-    }
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": ["vite/client"]
   },
-  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"],
+  "include": ["src"],
   "exclude": ["node_modules"]
+  
 }

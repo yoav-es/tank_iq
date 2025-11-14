@@ -6,7 +6,7 @@ import {
   FuelEntryInput, 
   OverallStats, 
   DetailedStats 
-} from '../types/FuelEntry';
+} from '../types/fuelEntry';
 import * as apiService from '../services/apiService';
 
 // Define the shape of the store's state
@@ -43,6 +43,8 @@ export const useFuelStore = defineStore('fuel', {
       this.error = null;
       try {
         const response = await apiService.getEntries();
+        console.log('📦 Entries:', response.entries);
+        console.log('📊 Overall Stats:', response.overall_stats);
         this.entries = response.entries;
         this.overallStats = response.overall_stats;
       } catch (err: any) {
@@ -129,6 +131,7 @@ export const useFuelStore = defineStore('fuel', {
       this.error = null;
       try {
         this.detailedStats = await apiService.getDetailedStats();
+        console.log('📈 Detailed Stats:', this.detailedStats);
       } catch (err: any) {
         this.error = `Failed to load detailed stats: ${err.message}`;
         this.detailedStats = null;
