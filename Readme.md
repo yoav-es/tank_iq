@@ -114,3 +114,26 @@ This table defines the exact visual states and necessary feedback mechanisms in 
 ### 🎨 Next Step
 * **Current State:** Application is functional but unstyled ("basic HTML").
 * **Immediate Task:** **Task 7: Configure Tailwind CSS** to apply the intended design.
+
+📝 Project Summary (Today)
+- Rebuilt the front‑end using Vue 3 after several crashes interrupted earlier progress.
+- Integrated Pinia for state management and Vue Router for navigation.
+- Designed the Add Entry form (AddEntryView.vue) with proper validation rules, fixing the tricky date picker issue by switching to v-model:formatted-value so dates are stored as strings.
+- Implemented the Fuel Store (fuelStore.ts) to calculate and store derived fields like total_cost and km_per_liter.
+- Connected the Fuel Log view to the store, corrected the table component (n-data-table instead of n-table), and aligned column keys with the actual data fields so entries display properly.
+- Replaced Tailwind CSS with Naive UI, relying on its styled Vue components (n-card, n-form, n-input-number, n-data-table, etc.) for layout and design instead of utility classes.
+
+
++-------------------------------------------------------------+
+| Sidebar (20%)        | Main Content Area (80%)              |
+| -------------------  | -----------------------------------  |
+| • Fuel Log           |  Fuel Log Table                      |
+| • Add Entry          |   --------------------------------   |
+| • Stats              |   | Date | Liters | Price/L | ... |  |
+|                      |   --------------------------------   |
+| (compact vertical     |   | 2025-11-14 | 40 | 6.5 | ... |   |
+|  menu, always visible)|   --------------------------------   |
++-------------------------------------------------------------+
+| Footer (spans full width)                                   |
+| © Fuel Tracker App – Vue + Pinia + Naive UI                 |
++-------------------------------------------------------------+
