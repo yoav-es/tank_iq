@@ -1,3 +1,4 @@
+<!--ui\views\AddEntryView.vue-->
 <template>
   <n-card title="Add Fuel Entry" bordered>
     <n-form :model="form" :rules="rules" ref="formRef" label-width="120px">

@@ -1,12 +1,24 @@
-import { createRouter, createWebHistory } from 'vue-router';
+import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
 import FuelLogView from '../views/FuelLogView.vue';
 import AddEntryView from '../views/AddEntryView.vue';
 import StatsView from '../views/StatsView.vue';
 
-const routes = [
-  { path: '/', component: FuelLogView },
-  { path: '/entry/add', component: AddEntryView },
-  { path: '/stats', component: StatsView },
+const routes: RouteRecordRaw[] = [
+  {
+    path: '/',
+    name: 'entries',
+    component: FuelLogView,
+  },
+  {
+    path: '/entry/add',
+    name: 'add-entry',
+    component: AddEntryView,
+  },
+  {
+    path: '/stats',
+    name: 'stats',
+    component: StatsView,
+  },
 ];
 
 const router = createRouter({

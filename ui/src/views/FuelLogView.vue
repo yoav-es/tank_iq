@@ -1,3 +1,4 @@
+<!--ui\views\FuelLogView.vue-->
 <template>
   <n-card title="Fuel Log" bordered>
     <n-data-table :columns="columns" :data="store.entries" striped />

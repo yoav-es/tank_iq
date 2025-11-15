@@ -137,3 +137,35 @@ This table defines the exact visual states and necessary feedback mechanisms in 
 | Footer (spans full width)                                   |
 | © Fuel Tracker App – Vue + Pinia + Naive UI                 |
 +-------------------------------------------------------------+
+
+# Project Summary (UI Work Session)
+
+## Technology & Framework
+- **Frontend Framework:** Vue 3 (Composition API, `<script setup>` syntax)
+- **Routing:** Vue Router for navigation between views
+- **State Management:** Pinia store (`useLayoutStore`) for menu state
+- **UI Library / GUI Framework:** Naive UI (`n-layout`, `n-menu`, `n-config-provider`, etc.)
+- **Styling:** Custom CSS with CSS Grid for layout, responsive design via media queries
+- **Build Tool:** Vite (standard for Vue 3 projects)
+
+## Sidebar
+- Converted to a fixed/sticky element so it stays visible while scrolling
+- Narrowed width (`clamp(100px, 12vw, 160px)`)
+- Dark background with white/blue text for contrast
+- Menu styling updated for hover/active states
+
+## Main Area
+- Unified background color (`#e5e7eb`) across `html`, `body`, `#app`, `.app-layout`, `.main`, and `.main-content`
+- Eliminated white gaps when scrolling
+- Header uses a slightly darker gray (`#d1d5db`) for subtle separation
+- Removed margin/padding offsets so the main screen aligns flush at the top with the sidebar header/menu
+
+## Layout
+- Replaced margin‑based offset with a proper CSS Grid (`grid-template-columns: sidebar + main`)
+- Sidebar and main area explicitly placed in the same grid row for top alignment
+- Responsive rules: sidebar stacks above main content on narrow screens
+
+## File Organization
+- Moved all styles into a dedicated `main.css` file
+- `App.vue` slimmed down to template + script only
+- `main.ts` imports `main.css` globally

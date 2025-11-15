@@ -1,3 +1,5 @@
+<!--ui\views\StatsView.vue-->
+
 <template>
   <n-card title="Fuel Statistics" bordered>
     <n-space vertical v-if="store.detailedStats">
