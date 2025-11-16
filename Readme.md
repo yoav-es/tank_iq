@@ -169,3 +169,83 @@ This table defines the exact visual states and necessary feedback mechanisms in 
 - Moved all styles into a dedicated `main.css` file
 - `App.vue` slimmed down to template + script only
 - `main.ts` imports `main.css` globally
+
+# Fuel Tracker App Wireframes
+
+---
+
+## Dashboard (Default Landing)
+
++-------------------------------------------------------------+
+| Sidebar (20%)        | Dashboard (Default Page)             |
+| -------------------  | -----------------------------------  |
+| • Dashboard (active) |   [ Graph: Avg Fuel Consumption ]    |
+| • Fuel Log           |   --------------------------------   |
+| • Statistics         |   Efficiency Trend Over Time         |
+|                      |                                      |
+| (icons + text)       |   [ Data Cards Row ]                 |
+|                      |   --------------------------------   |
+|                      |   | Current Avg | Best Month | Dist | |
+|                      |   | 6.8 L/100km | 5.9 L/100km|2450km| |
+|                      |   --------------------------------   |
++-------------------------------------------------------------+
+| Footer (spans full width)                                   |
+| Quick Links | Export CSV | Dark Mode Toggle                 |
++-------------------------------------------------------------+
+
+---
+
+## Statistics Screen
+
++-------------------------------------------------------------+
+| Sidebar (20%)        | Statistics                           |
+| -------------------  | -----------------------------------  |
+| • Dashboard          |   [ View Selector ]                  |
+| • Fuel Log           |   --------------------------------   |
+| • Statistics (active)|   | Monthly | Yearly | Custom Range | |
+|                      |   --------------------------------   |
+| (icons + text)       |   [ Date Range Picker ]              |
+|                      |   --------------------------------   |
+|                      |   | From: [____]  To: [____]        |
+|                      |   --------------------------------   |
+|                      |                                      |
+|                      |   [ Chart Area ]                     |
+|                      |   --------------------------------   |
+|                      |   | Line Chart: Avg Consumption      |
+|                      |   | (L/100km or km/L over time)      |
+|                      |   --------------------------------   |
+|                      |                                      |
+|                      |   [ Summary Cards ]                  |
+|                      |   --------------------------------   |
+|                      |   | Highest Efficiency | Lowest Eff. |
+|                      |   | Avg Consumption    | Total Dist. |
+|                      |   --------------------------------   |
++-------------------------------------------------------------+
+| Footer (spans full width)                                   |
+| Export CSV | Export PDF | Dark Mode Toggle                  |
++-------------------------------------------------------------+
+
+---
+
+## Fuel Log Screen
+
++-------------------------------------------------------------+
+| Sidebar (20%)        | Fuel Log                             |
+| -------------------  | -----------------------------------  |
+| • Dashboard          |   [ Fuel Log Title ]                 |
+| • Fuel Log (active)  |   --------------------------------   |
+| • Statistics         |   [ Add Entry ] [ Update Entry ]     |
+|                      |   [ Delete Entry ]                   |
+| (icons + text)       |   --------------------------------   |
+|                      |   Recent Entries Table               |
+|                      |   --------------------------------   |
+|                      |   | Date | Liters | Price/L | Dist | |
+|                      |   | 2025-11-14 | 40 | 6.5 | 520km | |
+|                      |   | 2025-11-20 | 35 | 6.4 | 460km | |
+|                      |   | 2025-11-25 | 42 | 6.6 | 540km | |
+|                      |   --------------------------------   |
+|                      |   Pagination / “View More”           |
++-------------------------------------------------------------+
+| Footer (spans full width)                                   |
+| Quick Links | Export CSV | Dark Mode Toggle                 |
++-------------------------------------------------------------+
