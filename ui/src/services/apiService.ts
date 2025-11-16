@@ -5,7 +5,7 @@ import {
   FuelEntryInput, 
   EntryListResponse, 
   DetailedStats 
-} from '../types/fuelEntry';
+} from '../types/FuelEntry';
 
 // BASE_URL should match your FastAPI server's host and port
 // Assumes FastAPI is running on default port 8000
