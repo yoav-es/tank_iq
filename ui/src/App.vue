@@ -1,78 +1,171 @@
-<!-- ui/src/App.vue -->
+<!-- ui/views/App.vue -->
 <template>
-  <n-config-provider
-    :theme-overrides="{
-      Menu: {
-        itemTextColor: '#ffffff',
-        itemIconColor: '#ffffff',
-        itemTextColorHover: '#3b82f6',
-        itemIconColorHover: '#3b82f6',
-        itemTextColorActive: '#3b82f6',
-        itemIconColorActive: '#3b82f6',
-        itemColorActive: 'rgba(59, 130, 246, 0.15)'
-      }
-    }"
-  >
-    <n-layout class="app-layout">
-      <div class="shell-grid">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-          <div class="sidebar-header">
-            <div class="header-title">TankIQ</div>
-          </div>
-
-          <n-menu
-            mode="vertical"
-            :options="menuOptions"
-            :value="active"
-            @update:value="onMenuSelect"
-          />
-        </aside>
-
-        <!-- Main content -->
-        <div class="main">
-          <n-layout-header class="main-header" bordered />
-          <n-layout-content class="main-content">
-            <router-view />
-          </n-layout-content>
+  <div id="app">
+    <div class="app-layout">
+      <aside class="sidebar">
+        <div>
+          <h2>{{ appTitle }}</h2>
+          <nav>
+            <ul>
+              <li>
+                <router-link
+                  to="/dashboard"
+                  :class="{ active: $route.name === 'dashboard' }"
+                >
+                  <n-icon size="18">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8v-10h-8v10zm0-18v6h8V3h-8z"/>
+                    </svg>
+                  </n-icon>
+                  <span>Dashboard</span>
+                </router-link>
+              </li>
+              <li>
+                <router-link
+                  to="/stats"
+                  :class="{ active: $route.name === 'stats' }"
+                >
+                  <n-icon size="18">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M3 17h2v-7H3v7zm4 0h2V7H7v10zm4 0h2v-4h-2v4zm4 0h2V4h-2v13zm4 0h2v-9h-2v9z"/>
+                    </svg>
+                  </n-icon>
+                  <span>Statistics</span>
+                </router-link>
+              </li>
+              <li>
+                <router-link
+                  to="/log"
+                  :class="{ active: $route.name === 'log' }"
+                >
+                  <n-icon size="18">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M3 5v14h18V5H3zm16 12H5V7h14v10z"/>
+                    </svg>
+                  </n-icon>
+                  <span>Log</span>
+                </router-link>
+              </li>
+            </ul>
+          </nav>
         </div>
-      </div>
-    </n-layout>
-  </n-config-provider>
+      </aside>
+
+      <main class="content" :class="{ 'no-scroll': $route.name === 'dashboard' }">
+        <router-view />
+      </main>
+    </div>
+
+    <footer class="footer">
+      <button>Quick Links</button>
+      <button>Export CSV</button>
+      <button>Dark Mode</button>
+    </footer>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { useLayoutStore } from './stores/layoutStore'
-
-const router = useRouter()
-const route = useRoute()
-const layout = useLayoutStore()
-
-const menuOptions = [
-  { label: 'Fuel Log', key: 'entries' },
-  { label: 'Statistics', key: 'stats' },
-  { label: 'Add Entry', key: 'add-entry' }
-]
-
-const active = ref<string>(route.name as string ?? route.path)
-
-function onMenuSelect(key: string): void {
-  active.value = key
-  layout.setMenu(key)
-  const target = router.getRoutes().find(r => r.name === key)
-  void router.push(target ? { name: key } : { path: `/${key}` })
-}
-
-watch(
-  () => route.name,
-  newName => {
-    active.value = (newName as string) ?? route.path
-    layout.setMenu(active.value)
-  },
-  { immediate: true }
-)
+const appTitle = 'TankIQ';
 </script>
 
-<!-- No <style> here; all styles are in main.css -->
+<style scoped>
+#app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-layout {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  min-height: 0;
+  align-items: stretch;
+}
+
+.sidebar {
+  width: clamp(100px, 14vw, 200px);
+  background-color: var(--color-sidebar);
+  color: var(--color-text);
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #2d3748;
+}
+
+.sidebar h2 {
+  color: #14b8a6;
+  margin-bottom: var(--space-md);
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+
+.sidebar li {
+  margin: var(--space-sm) 0;
+}
+
+.sidebar a {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: 6px;
+  text-decoration: none;
+  color: var(--color-text);
+  background-color: transparent;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.sidebar a:hover {
+  background-color: #1f2937;
+}
+
+.sidebar a.active {
+  background-color: var(--color-secondary);
+  color: #111827;
+  font-weight: bold;
+}
+
+.content {
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-xl);
+  background-color: var(--color-content);
+  color: var(--color-text);
+  overflow-y: auto;              /* default: internal scroll when needed */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Disable internal scroll for dashboard specifically */
+.content.no-scroll {
+  overflow-y: hidden;
+}
+
+.footer {
+  flex-shrink: 0;
+  background-color: var(--color-footer);
+  color: var(--color-text);
+  text-align: center;
+  padding: var(--space-sm);
+  border-top: 1px solid #2d3748;
+  display: flex;
+  justify-content: center;
+  gap: var(--space-md);
+}
+
+.footer button {
+  background: transparent;
+  border: none;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.footer button:hover {
+  color: var(--color-secondary);
+}
+</style>

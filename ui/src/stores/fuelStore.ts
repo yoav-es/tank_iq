@@ -6,7 +6,7 @@ import {
   FuelEntryInput, 
   OverallStats, 
   DetailedStats 
-} from '../types/FuelEntry';
+} from '../types/fuelEntry';
 import * as apiService from '../services/apiService';
 
 // Define the shape of the store's state

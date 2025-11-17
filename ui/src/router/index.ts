@@ -1,23 +1,32 @@
+//ui/src/index
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
-import FuelLogView from '../views/FuelLogView.vue';
-import AddEntryView from '../views/AddEntryView.vue';
+import DashboardView from '../views/DashboardView.vue';
 import StatsView from '../views/StatsView.vue';
+import LogView from '../views/LogView.vue';
 
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    name: 'entries',
-    component: FuelLogView,
+    redirect: '/dashboard',
   },
   {
-    path: '/entry/add',
-    name: 'add-entry',
-    component: AddEntryView,
+    path: '/dashboard',
+    name: 'dashboard',
+    component: DashboardView,
   },
   {
     path: '/stats',
     name: 'stats',
     component: StatsView,
+  },
+  {
+    path: '/log',
+    name: 'log',
+    component: LogView,
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/dashboard',
   },
 ];
 
