@@ -1,8 +1,10 @@
-//ui/src/index
-import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
-import DashboardView from '../views/DashboardView.vue';
-import StatsView from '../views/StatsView.vue';
-import LogView from '../views/LogView.vue';
+//ui/src/router/index
+import { createRouter, createWebHistory } from 'vue-router';
+import type { RouteRecordRaw } from 'vue-router';
+
+import DashboardView from '../views/dashboard-view.vue';
+import StatsView from '../views/stats-view.vue';
+import LogView from '../views/log-view.vue';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -11,17 +13,17 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/dashboard',
-    name: 'dashboard',
+    name: 'Dashboard',
     component: DashboardView,
   },
   {
     path: '/stats',
-    name: 'stats',
+    name: 'Stats',
     component: StatsView,
   },
   {
     path: '/log',
-    name: 'log',
+    name: 'Log',
     component: LogView,
   },
   {
@@ -30,9 +32,7 @@ const routes: RouteRecordRaw[] = [
   },
 ];
 
-const router = createRouter({
+export default createRouter({
   history: createWebHistory(),
   routes,
 });
-
-export default router;

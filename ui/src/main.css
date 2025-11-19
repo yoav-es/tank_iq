@@ -1,25 +1,3 @@
-/* Darker Grayscale + Green/Blue Palette */
-:root {
-  --color-primary: #3B82F6;
-  --color-secondary: #10B981;
-  --color-background: #111827; /* darkest */
-  --color-content: #374151;    /* mid-dark gray for content area */
-  --color-surface: #1F2937;
-  --color-card: #2d3748;
-  --color-text: #F9FAFB;
-  --color-sidebar: #1F2937;
-  --color-footer: #646d7b;
-    /* Spacing scale (8px base unit) */
-  --space-xs: 0.25rem;  /* 4px */
-  --space-sm: 0.5rem;   /* 8px */
-  --space-md: 1rem;     /* 16px */
-  --space-lg: 1.5rem;   /* 24px */
-  --space-xl: 2rem;     /* 32px */
-  --space-2xl: 2.5rem;  /* 40px */
-}
-
-
-
 /* Reset */
 * {
   margin: 0;
@@ -36,11 +14,34 @@ html, body, #app {
   flex-direction: column;
 }
 
+/* Theme Variables */
+:root {
+  --color-primary: #3B82F6;
+  --color-secondary: #10B981;
+  --color-background: #111827; /* darkest */
+  --color-content: #374151;    /* mid-dark gray for content area */
+  --color-surface: #1F2937;
+  --color-card: #2d3748;
+  --color-text: #F9FAFB;
+  --color-sidebar: #1F2937;
+  --color-footer: #646d7b;
+
+  /* Spacing scale (8px base unit) */
+  --space-xs: 0.25rem;  /* 4px */
+  --space-sm: 0.5rem;   /* 8px */
+  --space-md: 1rem;     /* 16px */
+  --space-lg: 1.5rem;   /* 24px */
+  --space-xl: 2rem;     /* 32px */
+  --space-2xl: 2.5rem;  /* 40px */
+}
+
 /* Layout */
 .app-layout {
   flex: 1;
   display: flex;
   flex-direction: row;
+  min-height: 0;
+  align-items: stretch;
 }
 
 /* Sidebar */
@@ -48,36 +49,39 @@ html, body, #app {
   width: clamp(100px, 14vw, 200px);
   background-color: var(--color-sidebar);
   color: var(--color-text);
-  padding: 1rem;
+  padding: var(--space-md);
   display: flex;
   flex-direction: column;
+  border-right: 1px solid #2d3748;
   position: sticky;
   top: 0;
   height: 100vh;
-  box-shadow: 2px 0 6px rgba(0,0,0,0.4); /* shadow on right edge */
+  box-shadow: 2px 0 6px rgba(0,0,0,0.4);
 }
 
 .sidebar h2 {
   color: #14B8A6;
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-md);
 }
 
-.sidebar nav ul {
+.sidebar ul {
   list-style: none;
+  padding: 0;
 }
 
-.sidebar nav li {
-  margin: 0.75rem 0;
+.sidebar li {
+  margin: var(--space-sm) 0;
 }
 
 .sidebar a {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.6rem 1rem;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
   border-radius: 6px;
   text-decoration: none;
   color: var(--color-text);
+  background-color: transparent;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
@@ -94,27 +98,34 @@ html, body, #app {
 /* Content Area */
 .content {
   flex: 1;
-  background-color: var(--color-content); /* renamed variable */
-  padding: 1.5rem;
-  overflow-y: auto;
+  min-height: 0;
+  padding: var(--space-xl);
+  background-color: var(--color-content);
   color: var(--color-text);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Footer */
+.content.no-scroll {
+  overflow-y: hidden;
+}
+
+/* Footer (refactored thinner) */
 .footer {
+  flex-shrink: 0;
   width: 100%;
   background-color: var(--color-footer);
   color: var(--color-text);
-  font-size: 0.75rem;
-  padding: 0.25rem 1rem;
+  font-size: 0.7rem;          /* smaller text */
+  padding: 0.15rem 0.5rem;    /* thinner vertical padding */
   text-align: center;
   display: flex;
   justify-content: center;
-  gap: 1rem;
-  box-shadow: 0 -2px 6px rgba(0,0,0,0.4); /* shadow above footer */
+  gap: 0.75rem;               /* tighter spacing */
+  box-shadow: 0 -1px 4px rgba(0,0,0,0.3);
   background: linear-gradient(to top, var(--color-footer), var(--color-content));
-}ם
-
+}
 
 .footer button {
   background: transparent;
@@ -122,6 +133,8 @@ html, body, #app {
   color: var(--color-text);
   cursor: pointer;
   transition: color 0.2s ease;
+  font-size: 0.7rem;          /* match footer text size */
+  padding: 0.1rem 0.25rem;    /* slim buttons */
 }
 
 .footer button:hover {

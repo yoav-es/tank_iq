@@ -1,171 +1,133 @@
-<!-- ui/views/App.vue -->
+<!-- ui/src/app.vue -->
 <template>
   <div id="app">
     <div class="app-layout">
+      <!-- Sidebar -->
       <aside class="sidebar">
-        <div>
-          <h2>{{ appTitle }}</h2>
-          <nav>
-            <ul>
-              <li>
-                <router-link
-                  to="/dashboard"
-                  :class="{ active: $route.name === 'dashboard' }"
-                >
-                  <n-icon size="18">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8v-10h-8v10zm0-18v6h8V3h-8z"/>
-                    </svg>
-                  </n-icon>
-                  <span>Dashboard</span>
-                </router-link>
-              </li>
-              <li>
-                <router-link
-                  to="/stats"
-                  :class="{ active: $route.name === 'stats' }"
-                >
-                  <n-icon size="18">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M3 17h2v-7H3v7zm4 0h2V7H7v10zm4 0h2v-4h-2v4zm4 0h2V4h-2v13zm4 0h2v-9h-2v9z"/>
-                    </svg>
-                  </n-icon>
-                  <span>Statistics</span>
-                </router-link>
-              </li>
-              <li>
-                <router-link
-                  to="/log"
-                  :class="{ active: $route.name === 'log' }"
-                >
-                  <n-icon size="18">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M3 5v14h18V5H3zm16 12H5V7h14v10z"/>
-                    </svg>
-                  </n-icon>
-                  <span>Log</span>
-                </router-link>
-              </li>
-            </ul>
-          </nav>
-        </div>
+        <h2 class="app-title">{{ appTitle }}</h2>
+        <nav>
+          <ul>
+            <li>
+              <router-link
+                to="/dashboard"
+                :class="{ active: $route.name === 'Dashboard' }"
+              >
+                <n-icon size="18">
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8v-10h-8v10zm0-18v6h8V3h-8z"/>
+                  </svg>
+                </n-icon>
+                <span>Dashboard</span>
+              </router-link>
+            </li>
+            <li>
+              <router-link
+                to="/stats"
+                :class="{ active: $route.name === 'Stats' }"
+              >
+                <n-icon size="18">
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3 17h2v-7H3v7zm4 0h2V7H7v10zm4 0h2v-4h-2v4zm4 0h2V4h-2v13zm4 0h2v-9h-2v9z"/>
+                  </svg>
+                </n-icon>
+                <span>Statistics</span>
+              </router-link>
+            </li>
+            <li>
+              <router-link
+                to="/log"
+                :class="{ active: $route.name === 'Log' }"
+              >
+                <n-icon size="18">
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3 5v14h18V5H3zm16 12H5V7h14v10z"/>
+                  </svg>
+                </n-icon>
+                <span>Log</span>
+              </router-link>
+            </li>
+          </ul>
+        </nav>
       </aside>
 
-      <main class="content" :class="{ 'no-scroll': $route.name === 'dashboard' }">
+      <!-- Main Content -->
+      <main class="content" :class="{ 'no-scroll': $route.name === 'Dashboard' }">
         <router-view />
       </main>
     </div>
 
+    <!-- Footer -->
     <footer class="footer">
       <button>Quick Links</button>
-      <button>Export CSV</button>
-      <button>Dark Mode</button>
+      <button @click="exportCsv">Export CSV</button>
+      <button @click="toggleDarkMode">Dark Mode</button>
     </footer>
   </div>
 </template>
 
 <script setup lang="ts">
+import { useLayoutStore } from './stores/layout-store';
+
 const appTitle = 'TankIQ';
+const layoutStore = useLayoutStore();
+
+function exportCsv(): void {
+  // Hook into your backend /entries/export/ endpoint
+  // For now, just a placeholder
+  // eslint-disable-next-line no-alert
+  alert('Export CSV triggered');
+}
+
+function toggleDarkMode(): void {
+  layoutStore.toggleSidebar(); // or implement a dark mode toggle in layoutStore
+}
 </script>
 
 <style scoped>
-#app {
-  display: flex;
-  flex-direction: column;
+.app-layout {
+  display: grid;
+  grid-template-columns: clamp(100px, 12vw, 160px) 1fr;
   min-height: 100vh;
 }
 
-.app-layout {
-  flex: 1;
-  display: flex;
-  flex-direction: row;
-  min-height: 0;
-  align-items: stretch;
-}
-
 .sidebar {
-  width: clamp(100px, 14vw, 200px);
-  background-color: var(--color-sidebar);
-  color: var(--color-text);
+  background: var(--color-sidebar-bg);
+  color: var(--color-sidebar-text);
   padding: var(--space-md);
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid #2d3748;
-}
-
-.sidebar h2 {
-  color: #14b8a6;
-  margin-bottom: var(--space-md);
+  position: sticky;
+  top: 0;
+  height: 100vh;
 }
 
 .sidebar ul {
   list-style: none;
   padding: 0;
+  margin: 0;
 }
 
 .sidebar li {
-  margin: var(--space-sm) 0;
+  margin-bottom: var(--space-md);
 }
 
-.sidebar a {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  padding: var(--space-sm) var(--space-md);
-  border-radius: 6px;
-  text-decoration: none;
-  color: var(--color-text);
-  background-color: transparent;
-  transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.sidebar a:hover {
-  background-color: #1f2937;
-}
-
-.sidebar a.active {
-  background-color: var(--color-secondary);
-  color: #111827;
+.sidebar .active {
   font-weight: bold;
+  color: var(--color-accent);
 }
 
 .content {
-  flex: 1;
-  min-height: 0;
-  padding: var(--space-xl);
-  background-color: var(--color-content);
-  color: var(--color-text);
-  overflow-y: auto;              /* default: internal scroll when needed */
-  display: flex;
-  flex-direction: column;
+  background: var(--color-main-bg);
+  padding: var(--space-lg);
+  overflow-y: auto;
 }
 
-/* Disable internal scroll for dashboard specifically */
 .content.no-scroll {
   overflow-y: hidden;
 }
 
 .footer {
-  flex-shrink: 0;
-  background-color: var(--color-footer);
-  color: var(--color-text);
-  text-align: center;
-  padding: var(--space-sm);
-  border-top: 1px solid #2d3748;
   display: flex;
-  justify-content: center;
-  gap: var(--space-md);
-}
-
-.footer button {
-  background: transparent;
-  border: none;
-  color: var(--color-text);
-  cursor: pointer;
-  transition: color 0.2s ease;
-}
-
-.footer button:hover {
-  color: var(--color-secondary);
+  justify-content: space-around;
+  padding: var(--space-md);
+  background: var(--color-footer-bg);
 }
 </style>
