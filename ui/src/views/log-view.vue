@@ -3,6 +3,16 @@
   <section class="log">
     <h1>Fuel Log</h1>
 
+    <!-- Add Entry Form -->
+    <form class="add-form" @submit.prevent="onAddEntry">
+      <input v-model="newEntry.date" type="date" required />
+      <input v-model.number="newEntry.distance" placeholder="Distance (km)" />
+      <input v-model.number="newEntry.liters" placeholder="Liters" />
+      <input v-model.number="newEntry.price_per_liter" placeholder="Price per Liter" />
+      <input v-model="newEntry.notes" placeholder="Notes" />
+      <button type="submit" class="add-btn">➕ Add Entry</button>
+    </form>
+
     <!-- Controls -->
     <div class="controls">
       <label>
@@ -25,6 +35,7 @@
           <th>Date</th>
           <th>Distance</th>
           <th>Liters</th>
+          <th>Price/L</th>
           <th>Total Cost</th>
           <th>Efficiency (km/L)</th>
           <th>Notes</th>
@@ -33,14 +44,27 @@
       </thead>
       <tbody>
         <tr v-for="entry in visibleEntries" :key="entry.id">
-          <td>{{ entry.date }}</td>
-          <td>{{ entry.distance }}</td>
-          <td>{{ entry.liters }}</td>
+          <td v-if="editingId !== entry.id">{{ entry.date }}</td>
+          <td v-else><input v-model="editData.date" type="date" /></td>
+
+          <td v-if="editingId !== entry.id">{{ entry.distance }}</td>
+          <td v-else><input v-model.number="editData.distance" /></td>
+
+          <td v-if="editingId !== entry.id">{{ entry.liters }}</td>
+          <td v-else><input v-model.number="editData.liters" /></td>
+
+          <td v-if="editingId !== entry.id">{{ entry.price_per_liter }}</td>
+          <td v-else><input v-model.number="editData.price_per_liter" /></td>
+
           <td>{{ entry.total_cost }}</td>
           <td>{{ entry.km_per_liter }}</td>
-          <td>{{ entry.notes }}</td>
+
+          <td v-if="editingId !== entry.id">{{ entry.notes }}</td>
+          <td v-else><input v-model="editData.notes" /></td>
+
           <td>
-            <button @click="onEditEntry(entry)">Edit</button>
+            <button v-if="editingId !== entry.id" @click="startEdit(entry)">Edit</button>
+            <button v-else @click="saveEdit(entry.id)">Save</button>
             <button @click="onDeleteEntry(entry.id)">Delete</button>
           </td>
         </tr>
@@ -52,12 +76,24 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useFuelStore } from '../stores/fuel-store';
-import type { FuelEntryDB } from '../types/fuel-entry';
+import type { FuelEntryDB, FuelEntryInput } from '../types/fuel-entry';
 
 const fuelStore = useFuelStore();
 
 const sortOrder = ref<'newest' | 'oldest'>('newest');
 const filterText = ref('');
+
+const newEntry = ref<FuelEntryInput>({
+  date: null,
+  distance: null as any,
+  liters: null as any,
+  price_per_liter: null as any,
+  notes: null
+});
+
+
+const editingId = ref<number | null>(null);
+const editData = ref<Partial<FuelEntryDB>>({});
 
 onMounted(async () => {
   await fuelStore.fetchEntriesAndStats();
@@ -82,14 +118,36 @@ const sortedEntries = computed<FuelEntryDB[]>(() => {
 
 const visibleEntries = computed(() => sortedEntries.value);
 
-function onEditEntry(entry: FuelEntryDB) {
-  // implement edit logic
-  console.log('Edit entry', entry);
+async function onAddEntry() {
+  try {
+    await fuelStore.addEntry(newEntry.value);
+    newEntry.value = { date: '', distance: 0, liters: 0, price_per_liter: 0, notes: '' };
+  } catch (err) {
+    console.error('Failed to add entry', err);
+  }
 }
 
-function onDeleteEntry(id: number) {
-  // implement delete logic
-  console.log('Delete entry', id);
+function startEdit(entry: FuelEntryDB) {
+  editingId.value = entry.id;
+  editData.value = { ...entry };
+}
+
+async function saveEdit(id: number) {
+  try {
+    await fuelStore.updateExistingEntry(id, editData.value as FuelEntryInput);
+    editingId.value = null;
+    editData.value = {};
+  } catch (err) {
+    console.error('Failed to update entry', err);
+  }
+}
+
+async function onDeleteEntry(id: number) {
+  try {
+    await fuelStore.removeEntry(id);
+  } catch (err) {
+    console.error('Failed to delete entry', err);
+  }
 }
 </script>
 
@@ -98,6 +156,25 @@ function onDeleteEntry(id: number) {
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
+}
+
+.add-form {
+  display: flex;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.add-btn {
+  background-color: var(--color-accent);
+  color: white;
+  padding: var(--space-sm) var(--space-md);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.add-btn:hover {
+  background-color: var(--color-accent-hover);
 }
 
 .controls {
