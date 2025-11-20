@@ -1,3 +1,9 @@
+This project provides a simple and reliable system for fuel logging.  
+It helps track fuel usage, costs, and efficiency over time, making record‑keeping and analysis straightforward.  
+
+This project follows the Airbnb JavaScript Style Guide for typescript and pep8 for python
+
+
 TankIQ/
 ├── app/                        # Core application logic
 │   ├── __init__.py             # Initializes the app package
@@ -6,7 +12,6 @@ TankIQ/
 │   ├── routes.py               # FastAPI endpoints for CRUD operations
 │   ├── utils.py                # Fuel statistics and calculations
 │   └── plots.py                # Graph generation with matplotlib/seaborn
-│
 ├── tests/                      
 ├── ui/                         
 |    ├── src 
@@ -20,9 +25,9 @@ TankIQ/
 |    │    ├── types/                  
 |    │    │    └── fuelEntry.ts  
 |    │    ├── views/                  
-|    │    │    ├── AddEntry.vue
-|    │    │    ├── FuelLogView.vue
-|    │    │    └── StatsView.vue
+|    │    │    ├── dashboard-view.vue
+|    │    │    ├── log-view.vue
+|    │    │    └── stats-view.vue
 |    |    ├── App.vue
 |    |    ├── main.css
 |    |    └── main.ts
@@ -162,7 +167,7 @@ Critical stability fixes and a comprehensive test suite ensure the API is robust
 
 ---
 
-## Fuel Log Screen
+## Log Screen
 
 +-------------------------------------------------------------+
 | Sidebar (20%)        | Fuel Log                             |
