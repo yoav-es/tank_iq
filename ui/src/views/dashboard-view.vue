@@ -1,3 +1,4 @@
+<!-- ui/src/views/dashboard-view.vue -->
 <template>
   <section class="dashboard">
     <h1 class="page-title">📊 Dashboard</h1>
@@ -20,7 +21,7 @@
 
     <!-- Graph Section -->
     <div class="card graph-card">
-      <h2>Average Fuel Consumption</h2>
+      <h3>Average Fuel Consumption</h3>
       <canvas ref="chartRef"></canvas>
     </div>
 
@@ -38,7 +39,7 @@
               ? fuelStore.detailedStats?.overall_stats.best_month_efficiency ?? '—'
               : fuelStore.detailedStats?.overall_stats.best_year_efficiency ?? '—'
           }} km/L
-      </p>
+        </p>
       </div>
       <div class="card stat-card">
         <h3>Total Distance</h3>
@@ -61,82 +62,142 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick, onUnmounted } from 'vue';
+import { ref, shallowRef, markRaw, toRaw, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { Chart, registerables } from 'chart.js';
+import type { ChartOptions, ChartData } from 'chart.js';
 import { useFuelStore } from '../stores/fuel-store';
 
 Chart.register(...registerables);
 
+type Mode = 'month' | 'year';
+
 const fuelStore = useFuelStore();
 const chartRef = ref<HTMLCanvasElement | null>(null);
-const chartInstance = ref<Chart | null>(null);
+const chartInstance = shallowRef<Chart<'line'> | null>(null);
+const viewMode = ref<Mode>('month');
 
-// Toggle state
-const viewMode = ref<'month' | 'year'>('month');
+let isMounted = false;
 
 onMounted(async () => {
+  isMounted = true;
   await fuelStore.fetchEntriesAndStats();
   await fuelStore.fetchDetailedStats();
-  renderChart();
+  await nextTick();
+  initChart();
 });
 
-// Re-render chart when toggle changes
-watch(viewMode, async () => {
-  await nextTick();   // wait for DOM update
-  renderChart();
-});
 onUnmounted(() => {
-  if (chartInstance.value) {
-    chartInstance.value.destroy();
+  isMounted = false;
+  const chart = chartInstance.value;
+  if (chart) {
+    chart.stop();
+    chart.destroy();
     chartInstance.value = null;
   }
 });
 
-async function renderChart(): Promise<void> {
-  if (!chartRef.value || !fuelStore.detailedStats) return;
+watch(viewMode, async () => {
+  if (!isMounted) return;
+  await nextTick();
+  updateChart();
+});
 
-  const stats =
-    viewMode.value === 'month'
-      ? (fuelStore.detailedStats?.monthly_stats ?? [])
-      : (fuelStore.detailedStats?.yearly_stats ?? []);
+function getStats(mode: Mode) {
+  const dsRaw = toRaw(fuelStore.detailedStats) as any | null;
+  const list: any[] =
+    mode === 'month'
+      ? [...(dsRaw?.monthly_stats ?? [])]
+      : [...(dsRaw?.yearly_stats ?? [])];
+  list.sort((a, b) => String(a.period_label).localeCompare(String(b.period_label)));
+  return list;
+}
 
-  if (!stats.length) return;
+function getLabels(mode: Mode, stats: any[]): string[] {
+  return stats.map((s) =>
+    mode === 'month'
+      ? `${String(s.period_label).split('-')[1]}-${String(s.period_label).split('-')[0]}`
+      : String(s.period_label)
+  );
+}
 
-  const ctx = chartRef.value.getContext("2d");
-  if (!ctx) return;
+function getData(stats: any[]): number[] {
+  return stats.map((s) => Number(s.average_km_per_liter ?? 0));
+}
 
-  if (chartInstance.value) {
-    chartInstance.value.destroy();
-    chartInstance.value = null;
-  }
-
-  chartInstance.value = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: stats.map((s) => {
-        const [year, month] = s.period_label.split('-');
-        return `${month}-${year}`;
-      }),
-      datasets: [
-        {
-          label: `Efficiency (${viewMode.value})`,
-          data: stats.map((s) => s.average_km_per_liter),
-          borderColor: '#4A90E2',
-          backgroundColor: 'rgba(74,144,226,0.2)',
-          fill: true,
-          tension: 0.3,
+function buildOptions(mode: Mode): ChartOptions<'line'> {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    layout: { padding: { bottom: 10 } },
+    animation: { duration: 300 },
+    plugins: { legend: { display: false } },
+    scales: {
+      x: {
+        title: {
+          display: true,
+          text: mode === 'month' ? 'Month' : 'Year',
+          color: '#f1f5f9',
+          padding: { top: 0.00001, bottom: 0.01},
         },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: false,
-      plugins: {
-        legend: { display: true, position: 'bottom' },
+        ticks: { color: '#f1f5f9' },
+      },
+      y: {
+        title: {
+          display: true,
+          text: 'Efficiency in km/L',
+          color: '#f1f5f9',
+        },
+        ticks: { color: '#f1f5f9' },
       },
     },
-  });
+  };
+}
+
+function initChart(): void {
+  if (!isMounted || !chartRef.value) return;
+  const ctx = chartRef.value.getContext('2d');
+  if (!ctx) return;
+
+  const stats = getStats(viewMode.value);
+  const labels = getLabels(viewMode.value, stats);
+  const dataset = getData(stats);
+
+  const data: ChartData<'line'> = {
+    labels,
+    datasets: [
+      {
+        label: `Efficiency (${viewMode.value})`,
+        data: dataset,
+        borderColor: '#10b981',
+        backgroundColor: 'rgba(16,185,129,0.2)',
+        fill: true,
+        tension: 0.3,
+      },
+    ],
+  };
+
+  chartInstance.value = markRaw(
+    new Chart<'line'>(ctx, {
+      type: 'line',
+      data,
+      options: buildOptions(viewMode.value),
+    })
+  );
+}
+
+function updateChart(): void {
+  const chart = chartInstance.value;
+  if (!chart) {
+    initChart();
+    return;
+  }
+
+  const stats = getStats(viewMode.value);
+  chart.data.labels = getLabels(viewMode.value, stats);
+  chart.data.datasets[0].label = `Efficiency (${viewMode.value})`;
+  chart.data.datasets[0].data = getData(stats);
+  chart.options = buildOptions(viewMode.value);
+  chart.update();
 }
 </script>
 
@@ -144,7 +205,6 @@ async function renderChart(): Promise<void> {
 .page-title {
   font-size: 2rem;
   font-weight: bold;
-  margin-bottom: var(--space-sm);
   border-bottom: 2px solid var(--color-accent);
   padding-bottom: var(--space-xs);
 }
@@ -152,76 +212,64 @@ async function renderChart(): Promise<void> {
 .dashboard {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xl);
+  gap: var(--space-lg);
 }
 
-/* Toggle Buttons */
 .toggle-buttons {
   display: flex;
-  gap: var(--space-md);
-  margin-bottom: var(--space-md);
+  gap: var(--space-xs);
 }
-
 .toggle-buttons button {
   padding: var(--space-xs) var(--space-md);
   border: 1px solid var(--color-accent);
   border-radius: 6px;
-  background: var(--color-card);
+  background: var(--color-surface);
+  color: var(--color-text);
   cursor: pointer;
   font-weight: bold;
 }
-
 .toggle-buttons button.active {
   background: var(--color-accent);
   color: #fff;
 }
 
-/* Graph Card */
 .graph-card {
   background: var(--color-card);
-  padding: var(--space-lg);
+  padding: var(--space-md);
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  height: 400px;
+  height: 440px;
+  min-height: 440px;
+  overflow: hidden;
 }
 
-/* Stats Grid */
 .cards-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(2, auto);
-  gap: var(--space-md);
+  gap: var(--space-sm);
 }
-
 .stat-card {
-  background: var(--color-card);
-  border-radius: 12px;
-  padding: var(--space-md);
+  background: #f9e65c;
+  border-radius: 10px;
+  padding: var(--space-sm);
   text-align: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
-
 .stat-card h3 {
-  color: var(--color-secondary);
-  margin-bottom: var(--space-sm);
-  font-size: 1rem;
+  color: #333;
+  margin-bottom: var(--space-xs);
+  font-size: 0.9rem;
 }
-
 .stat-card p {
-  font-size: 1.2rem;
+  font-size: 1rem;
   font-weight: bold;
-  color: var(--color-primary);
+  color: #000;
 }
 
 @media (max-width: 768px) {
-  .cards-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  .cards-grid { grid-template-columns: repeat(2, 1fr); }
 }
-
 @media (max-width: 480px) {
-  .cards-grid {
-    grid-template-columns: 1fr;
-  }
+  .cards-grid { grid-template-columns: 1fr; }
 }
 </style>
