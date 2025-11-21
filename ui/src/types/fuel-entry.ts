@@ -33,6 +33,8 @@ export interface OverallStats {
   entry_count: number;
   average_km_per_liter: number;
   average_cost_per_liter: number;
+  best_month_efficiency: number;
+  best_year_efficiency: number;
 }
 
 

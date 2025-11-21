@@ -5,6 +5,15 @@
   box-sizing: border-box;
 }
 
+input,
+select {
+  padding: var(--space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+
 html,
 body {
   height: 100%;
@@ -26,6 +35,11 @@ body {
   --color-footer-bg: #646d7b;
   --color-accent: #3B82F6;
   --color-border: #2d3748;
+  --color-success: #006400;
+  --color-success-hover: #004d00;
+  --color-danger: #dc2626;
+  --color-danger-hover: #b91c1c;
+
 
   /* Spacing scale */
   --space-xs: 0.25rem;
@@ -36,6 +50,12 @@ body {
   --space-2xl: 2.5rem;
 
   --footer-height: 2rem; /* slim footer height */
+
+    /* zebra row colors */
+  --color-row-light: #1f2937; /* lighter shade */
+  --color-row-dark: #111827;  /* darker shade */
+  --color-row-hover: #374151; /* hover highlight */
+
 }
 
 /* Root app layout */
@@ -158,3 +178,4 @@ body {
     position: relative;
   }
 }
+

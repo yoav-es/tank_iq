@@ -61,6 +61,8 @@ class OverallStats(BaseModel):
     entry_count: int
     average_km_per_liter: float
     average_cost_per_liter: float
+    best_month_efficiency: float
+    best_year_efficiency: float
 
 
 # --- 5. Time Period Stats Model (For Monthly/Yearly Aggregation) ---

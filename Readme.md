@@ -18,10 +18,10 @@ TankIQ/
 |    │    ├── router/                
 |    │    │    └── index.ts           
 |    │    ├── services/              
-|    │    │    └── apiServices.ts     
+|    │    │    └── api-services.ts     
 |    │    ├── stores/                
-|    │    │    ├── fuelStore.ts
-|    │    │    └── layoutStore.ts  
+|    │    │    ├── fuel-store.ts
+|    │    │    └── layout-store.ts  
 |    │    ├── types/                  
 |    │    │    └── fuelEntry.ts  
 |    │    ├── views/                  
@@ -189,3 +189,18 @@ Critical stability fixes and a comprehensive test suite ensure the API is robust
 | Footer (spans full width)                                   |
 | Quick Links | Export CSV | Dark Mode Toggle                 |
 +-------------------------------------------------------------+
+
+# Project Progress
+
+## ✅ Done
+- Built **Dashboard.vue** with graph + 2×3 stats grid
+- Adjusted graph height to 400px for better balance
+- Tightened spacing between dashboard title and graph
+- Styled footer to be thinner
+- Added zebra striping to log table rows using CSS variables
+
+## 🔜 Next
+- Load ~10 entries into the log view for testing
+- Evaluate table usability (sorting, filtering, editing)
+- Decide on enhancements (summary row, pagination, export options)
+- Consider responsive tweaks for cards grid and log table

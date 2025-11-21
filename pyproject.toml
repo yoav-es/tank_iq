@@ -1,0 +1,36 @@
+# pyproject.toml
+
+[project]
+name = "tankiq"
+version = "0.1.0"
+description = "Simple and reliable system for fuel logging, tracking usage, costs, and efficiency."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "matplotlib",
+    "seaborn",
+    "pytest",
+]
+
+[tool.pytest.ini_options]
+# Ensures tests can import `app` without setting PYTHONPATH manually
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+
+[tool.isort]
+profile = "black"
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "W503"]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"

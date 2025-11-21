@@ -1,83 +1,67 @@
+# tests/test_models.py
 import pytest
 from pydantic import ValidationError
-from datetime import date as dt
-from app.models import FuelEntryBase, FuelEntryCreate, FuelEntryDB
+from app.models import FuelEntryBase, FuelEntryDB
 
-# --- 1. Shared Test Data ---
-
+# --- Shared Test Data ---
 VALID_DATA = {
     "date": "2024-10-25",
     "liters": 50.5,
     "price_per_liter": 1.55,
     "distance": 450.0,
-    "notes": "Highway driving"
+    "notes": "Highway driving",
 }
 
-# --- 2. Tests for FuelEntryBase (Validation) ---
+# --- Tests for FuelEntryBase (Validation) ---
 
-def test_fuelentry_base_creation_success():
-    """Tests that a FuelEntryBase model can be created with valid data."""
-    entry = FuelEntryBase(**VALID_DATA)
-    assert entry.liters == 50.5
-    assert entry.date == "2024-10-25" # Date is stored as a string
-    assert entry.notes == "Highway driving"
-
-def test_fuelentry_base_date_validation_fail():
-    """Tests that the date validation fails for incorrect formats (using the custom validator)."""
+@pytest.mark.parametrize("field, value, expected_error", [
+    ("date", "25/10/2024", "Date must be in YYYY-MM-DD format."),
+    ("liters", "not a float", None),
+])
+def test_fuelentry_base_validation_fail(field, value, expected_error):
+    """Tests that invalid fields raise ValidationError with correct messages."""
     invalid_data = VALID_DATA.copy()
-    invalid_data['date'] = "25/10/2024" # Incorrect format
-    
+    invalid_data[field] = value
+
     with pytest.raises(ValidationError) as exc_info:
         FuelEntryBase(**invalid_data)
-        
-    # Check for the specific error message from the custom validator
-    assert "Date must be in YYYY-MM-DD format." in str(exc_info.value)
-    
-def test_fuelentry_base_liters_type_fail():
-    """Tests that a non-float value for liters raises a validation error (Pydantic core validation)."""
-    invalid_data = VALID_DATA.copy()
-    invalid_data['liters'] = "not a float"
-    
-    with pytest.raises(ValidationError):
-        FuelEntryBase(**invalid_data)
 
-# --- 3. Tests for FuelEntryDB (Calculated Fields & Config) ---
+    if expected_error:
+        assert expected_error in str(exc_info.value)
 
-def test_fuelentry_db_creation_with_all_fields():
-    """Tests FuelEntryDB model creation, ensuring calculated fields are present and correct."""
-    db_data = VALID_DATA.copy()
-    db_data.update({
-        "id": 1,
-        "total_cost": 78.275,  # 50.5 * 1.55
-        # FIX: km_per_liter (450.0 km / 50.5 L ≈ 8.910891)
-        "km_per_liter": 8.910891
-    })
-    
-    entry = FuelEntryDB(**db_data)
-    assert entry.id == 1
-    assert pytest.approx(entry.total_cost) == 78.275
-    assert pytest.approx(entry.km_per_liter) == 8.910891
+def test_fuelentry_base_creation_success():
+    """Valid FuelEntryBase creation works and preserves fields."""
+    entry = FuelEntryBase(**VALID_DATA)
+    assert entry.liters == 50.5
+    assert entry.date == "2024-10-25"
+    assert entry.notes == "Highway driving"
 
-def test_fuelentry_db_from_attributes_config():
-    """
-    Tests that the model can be instantiated from attributes (e.g., from ORM/DB row), 
-    verifying model_config = ConfigDict(from_attributes=True) is working.
-    """
-    # Simulate a database row object
-    db_row_dict = {
-        "id": 5,
-        "date": "2023-01-01",
-        "liters": 25.0,
-        "price_per_liter": 1.0,
-        "distance": 250.0,
-        "notes": None,
-        "total_cost": 25.0,
-        # FIX: km_per_liter (250.0 km / 25.0 L = 10.0)
-        "km_per_liter": 10.0
-    }
-    
-    entry = FuelEntryDB.model_validate(db_row_dict)
-    
-    assert entry.id == 5
-    assert entry.liters == 25.0
-    assert entry.km_per_liter == 10.0
+# --- Tests for FuelEntryDB (Calculated Fields & Config) ---
+
+@pytest.mark.parametrize("db_data, expected_cost, expected_kmpl", [
+    (
+        {**VALID_DATA, "id": 1, "total_cost": 78.275, "km_per_liter": 8.910891},
+        78.275,
+        8.910891,
+    ),
+    (
+        {
+            "id": 5,
+            "date": "2023-01-01",
+            "liters": 25.0,
+            "price_per_liter": 1.0,
+            "distance": 250.0,
+            "notes": None,
+            "total_cost": 25.0,
+            "km_per_liter": 10.0,
+        },
+        25.0,
+        10.0,
+    ),
+])
+def test_fuelentry_db_creation_and_config(db_data, expected_cost, expected_kmpl):
+    """FuelEntryDB creation validates calculated fields and from_attributes config."""
+    entry = FuelEntryDB.model_validate(db_data)
+    assert entry.id == db_data["id"]
+    assert pytest.approx(entry.total_cost) == expected_cost
+    assert pytest.approx(entry.km_per_liter) == expected_kmpl

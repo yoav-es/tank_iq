@@ -1,5 +1,4 @@
-// ui/src/stores/fuelStore.ts
-
+// ui/src/stores/fuel-store.ts
 import { defineStore } from 'pinia';
 import {
   FuelEntryDB,
@@ -64,7 +63,9 @@ export const useFuelStore = defineStore('fuel', {
       try {
         const updatedEntry = await apiService.updateEntry(id, updatedData);
         const index = this.entries.findIndex((entry) => entry.id === id);
-        if (index !== -1) this.entries[index] = updatedEntry;
+        if (index !== -1) {
+          this.entries[index] = updatedEntry;
+        }
         await this.fetchEntriesAndStats();
         return updatedEntry;
       } catch (err: unknown) {

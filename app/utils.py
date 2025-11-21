@@ -2,9 +2,9 @@
 import logging
 import csv
 from io import StringIO
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Sequence
 
-from .models import OverallStats
+from .models import OverallStats, TimePeriodStats
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +44,8 @@ def get_overall_stats(entries_raw: List[Dict[str, Any]]) -> OverallStats:
             entry_count=0,
             average_km_per_liter=0.0,
             average_cost_per_liter=0.0,
+            best_month_efficiency=0.0,
+            best_year_efficiency=0.0,
         )
 
     total_liters = sum(entry["liters"] for entry in entries_raw)
@@ -62,10 +64,29 @@ def get_overall_stats(entries_raw: List[Dict[str, Any]]) -> OverallStats:
         "entry_count": entry_count,
         "average_km_per_liter": round(average_km_per_liter, 2),
         "average_cost_per_liter": round(average_cost_per_liter, 2),
+        # placeholders, filled later in /stats endpoint
+        "best_month_efficiency": 0.0,
+        "best_year_efficiency": 0.0,
     }
 
     logger.info("Overall statistics calculated successfully.")
     return OverallStats(**stats)
+
+
+def get_best_efficiency(period_stats: Sequence[TimePeriodStats], label: str) -> float:
+    """
+    Return the highest km/L across a given period (month or year).
+
+    Args:
+        period_stats (Sequence[TimePeriodStats]): List of monthly or yearly stats.
+        label (str): Label type ("month" or "year"), kept for compatibility.
+
+    Returns:
+        float: Best efficiency (km/L). Returns 0.0 if no stats available.
+    """
+    if not period_stats:
+        return 0.0
+    return max(p.average_km_per_liter for p in period_stats)
 
 
 def convert_entries_to_csv(entries: List[Dict[str, Any]]) -> str:

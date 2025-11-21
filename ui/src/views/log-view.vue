@@ -1,32 +1,64 @@
 <!-- ui/src/views/log-view.vue -->
 <template>
   <section class="log">
-    <h1>Fuel Log</h1>
+    <h1>Log</h1>
 
     <!-- Add Entry Form -->
     <form class="add-form" @submit.prevent="onAddEntry">
-      <input v-model="newEntry.date" type="date" required />
-      <input v-model.number="newEntry.distance" placeholder="Distance (km)" />
-      <input v-model.number="newEntry.liters" placeholder="Liters" />
-      <input v-model.number="newEntry.price_per_liter" placeholder="Price per Liter" />
-      <input v-model="newEntry.notes" placeholder="Notes" />
-      <button type="submit" class="add-btn">➕ Add Entry</button>
+      <div class="fields">
+        <div class="form-field">
+          <label>Date</label>
+          <input v-model="newEntry.date" type="date" required />
+        </div>
+        <div class="form-field">
+          <label>Distance (km)</label>
+          <input v-model.number="newEntry.distance" type="number"  step="0.01" />
+        </div>
+        <div class="form-field">
+          <label>Liters</label>
+          <input v-model.number="newEntry.liters" type="number"  step="0.01" />
+        </div>
+        <div class="form-field">
+          <label>Price per Liter</label>
+          <input v-model.number="newEntry.price_per_liter" type="number" step="0.01" />
+        </div>
+        <div class="form-field">
+          <label>Notes</label>
+          <input v-model="newEntry.notes" type="text" />
+        </div>
+      </div>
+
+      <button type="submit" class="add-btn">Add Entry</button>
     </form>
 
     <!-- Controls -->
     <div class="controls">
-      <label>
-        Sort:
-        <select v-model="sortOrder">
-          <option value="newest">Newest First</option>
-          <option value="oldest">Oldest First</option>
-        </select>
-      </label>
-      <label>
-        Filter:
-        <input v-model="filterText" placeholder="Search notes..." />
-      </label>
+      <div class="control">
+        <label>
+          Sort:
+          <select class="ui-select" v-model="sortField">
+            <option value="date">Date</option>
+            <option value="distance">Distance</option>
+            <option value="liters">Liters</option>
+            <option value="price_per_liter">Price/L</option>
+            <option value="total_cost">Total Cost</option>
+            <option value="km_per_liter">Efficiency</option>
+          </select>
+          <select class="ui-select" v-model="sortOrder">
+            <option value="newest">Descending</option>
+            <option value="oldest">Ascending</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="control">
+        <label>
+          Filter by notes:
+          <input v-model="filterText" placeholder="Search notes..." />
+        </label>
+      </div>
     </div>
+
 
     <!-- Entries Table -->
     <table>
@@ -44,32 +76,39 @@
       </thead>
       <tbody>
         <tr v-for="entry in visibleEntries" :key="entry.id">
-          <td v-if="editingId !== entry.id">{{ entry.date }}</td>
+          <td v-if="editingId !== entry.id">{{ formatDate(entry.date) }}</td>
           <td v-else><input v-model="editData.date" type="date" /></td>
 
           <td v-if="editingId !== entry.id">{{ entry.distance }}</td>
-          <td v-else><input v-model.number="editData.distance" /></td>
+          <td v-else><input v-model.number="editData.distance" type="number" /></td>
 
           <td v-if="editingId !== entry.id">{{ entry.liters }}</td>
-          <td v-else><input v-model.number="editData.liters" /></td>
+          <td v-else><input v-model.number="editData.liters" type="number" /></td>
 
           <td v-if="editingId !== entry.id">{{ entry.price_per_liter }}</td>
-          <td v-else><input v-model.number="editData.price_per_liter" /></td>
+          <td v-else><input v-model.number="editData.price_per_liter" type="number" step="0.01" /></td>
 
-          <td>{{ entry.total_cost }}</td>
-          <td>{{ entry.km_per_liter }}</td>
+          <td>{{ entry.total_cost.toFixed(2) }}</td>
+          <td>{{ entry.km_per_liter.toFixed(2) }}</td>
 
           <td v-if="editingId !== entry.id">{{ entry.notes }}</td>
-          <td v-else><input v-model="editData.notes" /></td>
+          <td v-else><input v-model="editData.notes" type="text" /></td>
 
-          <td>
-            <button v-if="editingId !== entry.id" @click="startEdit(entry)">Edit</button>
-            <button v-else @click="saveEdit(entry.id)">Save</button>
-            <button @click="onDeleteEntry(entry.id)">Delete</button>
+          <td class="actions">
+            <button v-if="editingId !== entry.id" @click="startEdit(entry)" class="edit-btn">Edit</button>
+            <button v-else @click="saveEdit(entry.id)" class="save-btn">Save</button>
+            <button @click="onDeleteEntry(entry.id)" class="delete-btn">Delete</button>
           </td>
         </tr>
       </tbody>
     </table>
+
+    <!-- Bulk Import -->
+    <div class="csv-import">
+      <h2>Bulk Import</h2>
+      <p>You can upload a CSV file to add multiple entries at once.</p>
+      <input type="file" accept=".csv" @change="onCsvUpload" />
+    </div>
   </section>
 </template>
 
@@ -80,128 +119,316 @@ import type { FuelEntryDB, FuelEntryInput } from '../types/fuel-entry';
 
 const fuelStore = useFuelStore();
 
+// -------------------- State --------------------
 const sortOrder = ref<'newest' | 'oldest'>('newest');
+const sortField = ref<'date' | 'distance' | 'liters' | 'price_per_liter' | 'total_cost' | 'km_per_liter'>('date');
 const filterText = ref('');
 
-const newEntry = ref<FuelEntryInput>({
-  date: null,
-  distance: null as any,
-  liters: null as any,
-  price_per_liter: null as any,
-  notes: null
-});
-
-
+const newEntry = ref<FuelEntryInput>(emptyEntry());
 const editingId = ref<number | null>(null);
-const editData = ref<Partial<FuelEntryDB>>({});
+const editData = ref<FuelEntryInput>(emptyEntry());
 
-onMounted(async () => {
-  await fuelStore.fetchEntriesAndStats();
-});
+// -------------------- Lifecycle --------------------
+onMounted(() => fuelStore.fetchEntriesAndStats());
 
-const filteredEntries = computed<FuelEntryDB[]>(() => {
-  if (!filterText.value) return fuelStore.entries;
-  return fuelStore.entries.filter((e) =>
-    e.notes?.toLowerCase().includes(filterText.value.toLowerCase())
-  );
-});
+// -------------------- Computed --------------------
+const filteredEntries = computed<FuelEntryDB[]>(() =>
+  filterText.value
+    ? fuelStore.entries.filter((e) =>
+        e.notes?.toLowerCase().includes(filterText.value.toLowerCase())
+      )
+    : fuelStore.entries
+);
 
 const sortedEntries = computed<FuelEntryDB[]>(() => {
   const list = [...filteredEntries.value];
   list.sort((a, b) => {
-    const da = a.date ? new Date(a.date).getTime() : 0;
-    const db = b.date ? new Date(b.date).getTime() : 0;
-    return sortOrder.value === 'newest' ? db - da : da - db;
+    if (sortField.value === 'date') {
+      const da = a.date ? new Date(a.date).getTime() : 0;
+      const db = b.date ? new Date(b.date).getTime() : 0;
+      return sortOrder.value === 'newest' ? db - da : da - db;
+    }
+    const av = a[sortField.value] ?? 0;
+    const bv = b[sortField.value] ?? 0;
+    return sortOrder.value === 'newest'
+      ? (bv as number) - (av as number)
+      : (av as number) - (bv as number);
   });
   return list;
 });
 
-const visibleEntries = computed(() => sortedEntries.value);
+const visibleEntries = computed(() => {
+  return sortedEntries.value.slice(0, 5); // show only 6 entries
+});
 
-async function onAddEntry() {
+
+// -------------------- Actions --------------------
+async function onAddEntry(): Promise<void> {
   try {
     await fuelStore.addEntry(newEntry.value);
-    newEntry.value = { date: '', distance: 0, liters: 0, price_per_liter: 0, notes: '' };
+    newEntry.value = emptyEntry();
   } catch (err) {
     console.error('Failed to add entry', err);
   }
 }
 
-function startEdit(entry: FuelEntryDB) {
+function startEdit(entry: FuelEntryDB): void {
   editingId.value = entry.id;
-  editData.value = { ...entry };
+  editData.value = {
+    date: entry.date ?? '',
+    distance: entry.distance ?? 0,
+    liters: entry.liters ?? 0,
+    price_per_liter: entry.price_per_liter ?? 0,
+    notes: entry.notes ?? ''
+  };
 }
 
-async function saveEdit(id: number) {
+async function saveEdit(id: number): Promise<void> {
   try {
-    await fuelStore.updateExistingEntry(id, editData.value as FuelEntryInput);
+    await fuelStore.updateExistingEntry(id, editData.value);
     editingId.value = null;
-    editData.value = {};
+    editData.value = emptyEntry();
   } catch (err) {
     console.error('Failed to update entry', err);
   }
 }
 
-async function onDeleteEntry(id: number) {
+async function onDeleteEntry(id: number): Promise<void> {
   try {
     await fuelStore.removeEntry(id);
   } catch (err) {
     console.error('Failed to delete entry', err);
   }
 }
+
+// -------------------- Helpers --------------------
+function formatDate(dateStr?: string | null): string {
+  return dateStr ? new Date(dateStr).toLocaleDateString() : '';
+}
+
+function emptyEntry(): FuelEntryInput {
+  return { date: '', distance: 0, liters: 0, price_per_liter: 0, notes: '' };
+}
+
+// -------------------- CSV Import --------------------
+function onCsvUpload(event: Event): void {
+  const input = event.target as HTMLInputElement;
+  if (!input.files?.length) return;
+
+  const file = input.files[0];
+  console.log('CSV file selected:', file.name);
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    console.log('CSV file loaded');
+    const text = e.target?.result as string;
+    const rows = text.trim().split('\n');
+
+    const entries = parseCsvRows(rows);
+    let importedCount = 0;
+
+    for (const entry of entries) {
+      try {
+        await fuelStore.addEntry(entry);
+        importedCount++;
+      } catch (err) {
+        console.error('Failed to import entry:', entry, err);
+      }
+    }
+
+    console.log(`Imported ${importedCount} entries`);
+  };
+
+  reader.readAsText(file);
+}
+
+function parseCsvRows(rows: string[]): FuelEntryInput[] {
+  // Expecting header row: date,distance,liters,price_per_liter,notes
+  return rows.slice(1).map((row) => {
+    const [date, distance, liters, price_per_liter, notes] = row.split(',');
+    return {
+      date: date?.trim() || '',
+      distance: Number(distance),
+      liters: Number(liters),
+      price_per_liter: Number(price_per_liter),
+      notes: notes?.trim() || ''
+    };
+  }).filter((entry) => entry.date && entry.distance && entry.liters && entry.price_per_liter);
+}
 </script>
 
 <style scoped>
+/* Layout */
 .log {
   display: flex;
   flex-direction: column;
-  gap: var(--space-lg);
-}
-
-.add-form {
-  display: flex;
   gap: var(--space-md);
-  margin-bottom: var(--space-md);
 }
 
-.add-btn {
-  background-color: var(--color-accent);
-  color: white;
-  padding: var(--space-sm) var(--space-md);
+/* Headline */
+.log h1 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin-bottom: var(--space-sm);
+  color: var(--color-text-strong);
+  border-bottom: 2px solid var(--color-border);
+  padding-bottom: var(--space-xs);
+}
+
+/* Add Entry Form */
+.log .add-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  width: 100%;
+  border-bottom: 2px solid var(--color-border);
+  padding-bottom: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.log .fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  width: 100%;
+}
+
+.log .form-field {
+  flex: 1 1 200px;
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+}
+
+.log .form-field > label {
+  margin-bottom: var(--space-xs);
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.log .form-field > input {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: var(--space-xs) var(--space-sm);
+  font-size: 0.9rem;
+  background-color: var(--color-input-bg);
+  color: var(--color-text);
+}
+
+/* Add Entry button */
+.log .add-btn {
+  align-self: flex-start;
+  background-color: var(--color-success);
+  color: #fff;
+  font-weight: 500;
+  margin-top: var(--space-xs);
+}
+.log .add-btn:hover { background-color: var(--color-success-hover); }
+.log .add-btn:disabled { background-color: var(--color-border); cursor: not-allowed; }
+
+/* Controls */
+.log .controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-sm);
+}
+
+.log .control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  white-space: nowrap;
+}
+
+.log .control select,
+.log .control input {
+  min-width: 160px;
+  height: 2rem;
+  padding: 0 var(--space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+/* Dropdown fix */
+.log .control select option {
+  background-color: var(--color-input-bg);
+  color: var(--color-text);
+}
+
+/* Buttons */
+.log button {
   border: none;
   border-radius: 4px;
   cursor: pointer;
+  padding: var(--space-sm) var(--space-md);
+  font-size: 0.9rem;
+  transition: background-color 0.2s ease;
+  color: #fff;
+}
+.log button:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
-.add-btn:hover {
-  background-color: var(--color-accent-hover);
-}
+.log .edit-btn { background-color: var(--color-primary); }
+.log .edit-btn:hover { background-color: var(--color-primary-hover); }
+.log .save-btn { background-color: var(--color-secondary); }
+.log .save-btn:hover { background-color: var(--color-secondary-hover); }
+.log .delete-btn { background-color: var(--color-danger); }
+.log .delete-btn:hover { background-color: var(--color-danger-hover); }
 
-.controls {
-  display: flex;
-  gap: var(--space-md);
-  margin-bottom: var(--space-md);
-}
-
-table {
+/* Table */
+.log table {
   width: 100%;
   border-collapse: collapse;
+  margin-bottom: var(--space-xs);
+  border-bottom: 1px solid var(--color-border); /* separator under table */
 }
 
-th, td {
+.log th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--color-text-strong);
+}
+
+.log th, .log td {
   padding: var(--space-sm);
   border-bottom: 1px solid var(--color-border);
 }
 
-tbody tr:nth-child(odd) {
-  background-color: var(--color-row-light);
+.log tbody tr:nth-child(odd) { background-color: var(--color-row-light); }
+.log tbody tr:nth-child(even) { background-color: var(--color-row-dark); }
+.log tbody tr:hover { background-color: var(--color-row-hover); transition: background-color 0.2s ease; }
+
+.log .actions { display: flex; gap: var(--space-sm); }
+
+/* Bulk Import */
+.log .csv-import {
+  padding-top: var(--space-xs);
 }
 
-tbody tr:nth-child(even) {
-  background-color: var(--color-row-dark);
+.log .csv-import h2 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: var(--space-xs);
 }
 
-tbody tr:hover {
-  background-color: var(--color-row-hover);
+.log .csv-import p {
+  margin-bottom: var(--space-xs);
+  color: var(--color-text);
+}
+
+.log .csv-import input[type="file"] {
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: var(--space-xs);
+  background-color: var(--color-input-bg);
+  color: var(--color-text);
 }
 </style>
