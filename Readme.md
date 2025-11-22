@@ -116,91 +116,53 @@ Critical stability fixes and a comprehensive test suite ensure the API is robust
 
 ## Dashboard (Default Landing)
 
-+-------------------------------------------------------------+
-| Sidebar (20%)        | Dashboard (Default Page)             |
-| -------------------  | -----------------------------------  |
-| • Dashboard (active) |   [ Graph: Avg Fuel Consumption ]    |
-| • Fuel Log           |   --------------------------------   |
-| • Statistics         |   Efficiency Trend Over Time         |
-|                      |                                      |
-| (icons + text)       |   [ Data Cards Row ]                 |
-|                      |   --------------------------------   |
-|                      |   | Current Avg | Best Month | Dist | |
-|                      |   | 6.8 L/100km | 5.9 L/100km|2450km| |
-|                      |   --------------------------------   |
-+-------------------------------------------------------------+
-| Footer (spans full width)                                   |
-| Quick Links | Export CSV | Dark Mode Toggle                 |
-+-------------------------------------------------------------+
-
----
 
 ## Statistics Screen
 
-+-------------------------------------------------------------+
-| Sidebar (20%)        | Statistics                           |
-| -------------------  | -----------------------------------  |
-| • Dashboard          |   [ View Selector ]                  |
-| • Fuel Log           |   --------------------------------   |
-| • Statistics (active)|   | Monthly | Yearly | Custom Range | |
-|                      |   --------------------------------   |
-| (icons + text)       |   [ Date Range Picker ]              |
-|                      |   --------------------------------   |
-|                      |   | From: [____]  To: [____]        |
-|                      |   --------------------------------   |
-|                      |                                      |
-|                      |   [ Chart Area ]                     |
-|                      |   --------------------------------   |
-|                      |   | Line Chart: Avg Consumption      |
-|                      |   | (L/100km or km/L over time)      |
-|                      |   --------------------------------   |
-|                      |                                      |
-|                      |   [ Summary Cards ]                  |
-|                      |   --------------------------------   |
-|                      |   | Highest Efficiency | Lowest Eff. |
-|                      |   | Avg Consumption    | Total Dist. |
-|                      |   --------------------------------   |
-+-------------------------------------------------------------+
-| Footer (spans full width)                                   |
-| Export CSV | Export PDF | Dark Mode Toggle                  |
-+-------------------------------------------------------------+
-
----
 
 ## Log Screen
 
-+-------------------------------------------------------------+
-| Sidebar (20%)        | Fuel Log                             |
-| -------------------  | -----------------------------------  |
-| • Dashboard          |   [ Fuel Log Title ]                 |
-| • Fuel Log (active)  |   --------------------------------   |
-| • Statistics         |   [ Add Entry ] [ Update Entry ]     |
-|                      |   [ Delete Entry ]                   |
-| (icons + text)       |   --------------------------------   |
-|                      |   Recent Entries Table               |
-|                      |   --------------------------------   |
-|                      |   | Date | Liters | Price/L | Dist | |
-|                      |   | 2025-11-14 | 40 | 6.5 | 520km | |
-|                      |   | 2025-11-20 | 35 | 6.4 | 460km | |
-|                      |   | 2025-11-25 | 42 | 6.6 | 540km | |
-|                      |   --------------------------------   |
-|                      |   Pagination / “View More”           |
-+-------------------------------------------------------------+
-| Footer (spans full width)                                   |
-| Quick Links | Export CSV | Dark Mode Toggle                 |
-+-------------------------------------------------------------+
 
 # Project Progress
 
-## ✅ Done
-- Built **Dashboard.vue** with graph + 2×3 stats grid
-- Adjusted graph height to 400px for better balance
-- Tightened spacing between dashboard title and graph
-- Styled footer to be thinner
-- Added zebra striping to log table rows using CSS variables
+# We split the single isLoading flag into isLoadingEntries and isLoadingStats so Dashboard and Stats can load independently without overwriting each other.
 
-## 🔜 Next
-- Load ~10 entries into the log view for testing
-- Evaluate table usability (sorting, filtering, editing)
-- Decide on enhancements (summary row, pagination, export options)
-- Consider responsive tweaks for cards grid and log table
+# Fuel Tracker Improvement Roadmap
+
+## ✅ Current Status
+- **Dashboard**: looks fine, no major changes needed  
+- **Log**: also fine  
+
+## 🔧 Improvements Needed
+1. **Statistics**
+   - Efficiency graph needs fixing (currently left-to-right, should be right-to-left for your locale).
+   - Graph orientation should respect language/region settings.
+
+2. **Monthly & Yearly Filters**
+   - Add ability to **choose a specific month**.
+   - Same for **year selection** (instead of showing all data).
+
+3. **Currency Configuration**
+   - Currency should be **configurable as an argument** (e.g., `--currency=USD` or via settings).
+   - This allows localization and flexibility.
+
+4. **Summary Table**
+   - Currently shows **all entries unnecessarily**.
+   - Should instead show **monthly totals** (liters, cost, distance).
+   - Insights (efficiency, averages, anomalies) should follow the summary.
+
+5. **Export & Purge Options**
+   - Add **export** (CSV/JSON) for backups or analysis.
+   - Add **purge database** option for resetting/cleaning data.
+
+6. **Dark Mode**
+   - Implement a **dark theme toggle** for better UX.
+
+7. **Deployment**
+   - **Docker image**: containerize the app for easy deployment.
+   - **Makefile**: automate build, test, and deployment steps.
+
+## 🚀 Suggested Next Steps
+- **Prioritize UX fixes first**: statistics graph orientation, summary table, filters.  
+- **Then add configuration options**: currency, export/purge.  
+- **Finally tackle deployment & theming**: dark mode, Docker, Makefile.  

@@ -60,7 +60,15 @@ def list_entries_and_stats() -> EntryList:
 
     processed_entries = database.get_all_entries_processed()
     raw_entries = database.get_all_entries_raw()
-    overall_stats_data = get_overall_stats(raw_entries)
+
+    monthly_stats = get_monthly_stats() or []
+    yearly_stats = get_yearly_stats() or []
+
+    overall_stats_model = get_overall_stats(
+        raw_entries,
+        monthly_stats=monthly_stats,
+        yearly_stats=yearly_stats,
+    )
 
     logger.info(
         "Successfully retrieved %d entries and calculated stats.",
@@ -69,7 +77,7 @@ def list_entries_and_stats() -> EntryList:
 
     return EntryList(
         entries=processed_entries,
-        overall_stats=OverallStats(**overall_stats_data.model_dump()),
+        overall_stats=overall_stats_model,
     )
 
 
@@ -109,15 +117,15 @@ def get_detailed_stats() -> DetailedStats:
     """Retrieve overall, monthly, and yearly statistics."""
     logger.info("Received GET request for detailed statistical insights.")
 
-    raw_entries = database.get_all_entries_raw() 
-    overall_stats_model = get_overall_stats(raw_entries)
-
+    raw_entries = database.get_all_entries_raw()
     monthly_stats = get_monthly_stats() or []
     yearly_stats = get_yearly_stats() or []
 
-    # Fill in best efficiencies
-    overall_stats_model.best_month_efficiency = get_best_efficiency(monthly_stats, "month")
-    overall_stats_model.best_year_efficiency = get_best_efficiency(yearly_stats, "year")
+    overall_stats_model = get_overall_stats(
+        raw_entries,
+        monthly_stats=monthly_stats,
+        yearly_stats=yearly_stats,
+    )
 
     logger.info(
         "Successfully calculated overall, %d monthly, and %d yearly stats.",

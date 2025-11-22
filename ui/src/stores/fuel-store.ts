@@ -12,8 +12,12 @@ interface FuelState {
   entries: FuelEntryDB[];
   overallStats: OverallStats | null;
   detailedStats: DetailedStats | null;
-  isLoading: boolean;
+  // CHANGE: split loading into two flags
+  isLoadingEntries: boolean;   // CHANGE: new
+  isLoadingStats: boolean;     // CHANGE: new
   error: string | null;
+  // CHANGE: track last update timestamp for freshness
+  lastUpdated: number;         // CHANGE: new
 }
 
 export const useFuelStore = defineStore('fuel', {
@@ -21,8 +25,11 @@ export const useFuelStore = defineStore('fuel', {
     entries: [],
     overallStats: null,
     detailedStats: null,
-    isLoading: false,
+    // CHANGE: initialize new flags
+    isLoadingEntries: false,   // CHANGE: new
+    isLoadingStats: false,     // CHANGE: new
     error: null,
+    lastUpdated: 0,            // CHANGE: new
   }),
 
   getters: {
@@ -32,10 +39,10 @@ export const useFuelStore = defineStore('fuel', {
 
   actions: {
     async fetchEntriesAndStats(): Promise<void> {
-      this.isLoading = true;
+      this.isLoadingEntries = true; // CHANGE: use specific flag
       this.error = null;
       try {
-        const { entries, overall_stats } = await apiService.getEntries();
+        const { entries, overall_stats } = await apiService.getEntries(); // CHANGE: removed timestamp
         this.entries = entries;
         this.overallStats = overall_stats;
       } catch (err: unknown) {
@@ -43,7 +50,7 @@ export const useFuelStore = defineStore('fuel', {
         this.entries = [];
         this.overallStats = null;
       } finally {
-        this.isLoading = false;
+        this.isLoadingEntries = false; // CHANGE: reset specific flag
       }
     },
 
@@ -86,15 +93,18 @@ export const useFuelStore = defineStore('fuel', {
     },
 
     async fetchDetailedStats(): Promise<void> {
-      this.isLoading = true;
+      // CHANGE: use isLoadingStats instead of isLoading
+      this.isLoadingStats = true;
       this.error = null;
       try {
-        this.detailedStats = await apiService.getDetailedStats();
+        const stats = await apiService.getDetailedStats();
+        this.detailedStats = stats;
       } catch (err: unknown) {
         this.error = err instanceof Error ? err.message : 'Unknown error';
         this.detailedStats = null;
       } finally {
-        this.isLoading = false;
+        // CHANGE: reset isLoadingStats
+        this.isLoadingStats = false;
       }
     },
   },

@@ -2,7 +2,7 @@
 import logging
 import csv
 from io import StringIO
-from typing import List, Dict, Any, Sequence
+from typing import List, Dict, Any, Sequence, Optional
 
 from .models import OverallStats, TimePeriodStats
 
@@ -24,19 +24,19 @@ def calculate_entry_stats(
     }
 
 
-def get_overall_stats(entries_raw: List[Dict[str, Any]]) -> OverallStats:
+def get_overall_stats(
+    entries_raw: List[Dict[str, Any]],
+    monthly_stats: Optional[Sequence[TimePeriodStats]] = None,
+    yearly_stats: Optional[Sequence[TimePeriodStats]] = None,
+) -> OverallStats:
     """
     Calculate overall statistics (totals and averages) from raw entries.
-
-    Returns:
-        OverallStats: Pydantic model with totals and averages.
+    Optionally include monthly/yearly stats to compute best efficiencies.
     """
     entry_count = len(entries_raw)
 
     if not entries_raw:
-        logger.warning(
-            "Attempted to calculate overall statistics with an empty dataset."
-        )
+        logger.warning("Attempted to calculate overall statistics with an empty dataset.")
         return OverallStats(
             total_distance=0.0,
             total_liters=0.0,
@@ -50,9 +50,7 @@ def get_overall_stats(entries_raw: List[Dict[str, Any]]) -> OverallStats:
 
     total_liters = sum(entry["liters"] for entry in entries_raw)
     total_distance = sum(entry["distance"] for entry in entries_raw)
-    total_cost = sum(
-        entry["liters"] * entry["price_per_liter"] for entry in entries_raw
-    )
+    total_cost = sum(entry["liters"] * entry["price_per_liter"] for entry in entries_raw)
 
     average_km_per_liter = total_distance / total_liters if total_liters else 0.0
     average_cost_per_liter = total_cost / total_liters if total_liters else 0.0
@@ -64,25 +62,21 @@ def get_overall_stats(entries_raw: List[Dict[str, Any]]) -> OverallStats:
         "entry_count": entry_count,
         "average_km_per_liter": round(average_km_per_liter, 2),
         "average_cost_per_liter": round(average_cost_per_liter, 2),
-        # placeholders, filled later in /stats endpoint
-        "best_month_efficiency": 0.0,
-        "best_year_efficiency": 0.0,
+        "best_month_efficiency": get_best_efficiency(monthly_stats or [], "month"),
+        "best_year_efficiency": get_best_efficiency(yearly_stats or [], "year"),
     }
 
-    logger.info("Overall statistics calculated successfully.")
+    # sanity check for bad data
+    if stats["average_cost_per_liter"] > 20:
+        logger.warning("Average cost per liter looks unrealistic: %.2f", stats["average_cost_per_liter"])
+
+    logger.info("Overall statistics calculated successfully: %s", stats)
     return OverallStats(**stats)
 
 
 def get_best_efficiency(period_stats: Sequence[TimePeriodStats], label: str) -> float:
     """
     Return the highest km/L across a given period (month or year).
-
-    Args:
-        period_stats (Sequence[TimePeriodStats]): List of monthly or yearly stats.
-        label (str): Label type ("month" or "year"), kept for compatibility.
-
-    Returns:
-        float: Best efficiency (km/L). Returns 0.0 if no stats available.
     """
     if not period_stats:
         return 0.0
@@ -96,7 +90,6 @@ def convert_entries_to_csv(entries: List[Dict[str, Any]]) -> str:
         return "No data to export"
 
     output = StringIO()
-
     fieldnames = ["date", "liters", "price_per_liter", "distance", "notes"]
     if "id" in entries[0]:
         fieldnames.insert(0, "id")
@@ -109,5 +102,4 @@ def convert_entries_to_csv(entries: List[Dict[str, Any]]) -> str:
 
     csv_string = output.getvalue()
     logger.info("Successfully converted %d entries to CSV format.", len(entries))
-
     return csv_string

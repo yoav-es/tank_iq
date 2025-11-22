@@ -245,16 +245,23 @@ function onCsvUpload(event: Event): void {
 function parseCsvRows(rows: string[]): FuelEntryInput[] {
   // Expecting header row: date,distance,liters,price_per_liter,notes
   return rows.slice(1).map((row) => {
-    const [date, distance, liters, price_per_liter, notes] = row.split(',');
+    const [date, distance, liters, price_per_liter, ...notesParts] = row.split(',');
+    const notes = notesParts.join(','); // allow commas in notes
     return {
       date: date?.trim() || '',
-      distance: Number(distance),
-      liters: Number(liters),
-      price_per_liter: Number(price_per_liter),
+      distance: Number(distance) || 0,
+      liters: Number(liters) || 0,
+      price_per_liter: Number(price_per_liter) || 0,
       notes: notes?.trim() || ''
     };
-  }).filter((entry) => entry.date && entry.distance && entry.liters && entry.price_per_liter);
+  }).filter((entry) =>
+    entry.date &&
+    !isNaN(entry.distance) &&
+    !isNaN(entry.liters) &&
+    !isNaN(entry.price_per_liter)
+  );
 }
+
 </script>
 
 <style scoped>

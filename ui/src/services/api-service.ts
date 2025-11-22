@@ -8,6 +8,10 @@ import {
 
 const BASE_URL = 'http://localhost:8000';
 
+// CHANGE: keep controllers per endpoint to cancel overlapping requests
+let entriesController: AbortController | null = null;   // CHANGE: new
+let statsController: AbortController | null = null;     // CHANGE: new
+
 const handleResponse = async <T>(response: Response): Promise<T> => {
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({ detail: 'Unknown API error' }));
@@ -26,7 +30,13 @@ export const createEntry = async (entry: FuelEntryInput): Promise<FuelEntryDB> =
 };
 
 export const getEntries = async (): Promise<EntryListResponse> => {
-  const response = await fetch(`${BASE_URL}/entries/`);
+  // CHANGE: cancel previous request if still running
+  if (entriesController) entriesController.abort();      // CHANGE
+  entriesController = new AbortController();             // CHANGE
+
+  const response = await fetch(`${BASE_URL}/entries/`, {
+    signal: entriesController.signal,                    // CHANGE
+  });
   return handleResponse<EntryListResponse>(response);
 };
 
@@ -47,6 +57,12 @@ export const deleteEntry = async (id: number): Promise<void> => {
 };
 
 export const getDetailedStats = async (): Promise<DetailedStats> => {
-  const response = await fetch(`${BASE_URL}/stats/`);
+  // CHANGE: cancel previous stats request if still running
+  if (statsController) statsController.abort();          // CHANGE
+  statsController = new AbortController();               // CHANGE
+
+  const response = await fetch(`${BASE_URL}/stats/`, {
+    signal: statsController.signal,                      // CHANGE
+  });
   return handleResponse<DetailedStats>(response);
 };

@@ -21,7 +21,7 @@
 
     <!-- Graph Section -->
     <div class="card graph-card">
-      <h3>Average Fuel Consumption</h3>
+      <h3>Average Fuel Efficiency (km/L)</h3>
       <canvas ref="chartRef"></canvas>
     </div>
 
@@ -29,33 +29,38 @@
     <div class="cards-grid">
       <div class="card stat-card">
         <h3>Current Avg</h3>
-        <p>{{ fuelStore.overallStats?.average_km_per_liter ?? '—' }} km/L</p>
+        <p>{{ fuelStore.overallStats?.average_km_per_liter?.toFixed(2) ?? '—' }} km/L</p>
       </div>
+
       <div class="card stat-card">
         <h3>Best {{ viewMode === 'month' ? 'Month' : 'Year' }}</h3>
         <p>
           {{
             viewMode === 'month'
-              ? fuelStore.detailedStats?.overall_stats.best_month_efficiency ?? '—'
-              : fuelStore.detailedStats?.overall_stats.best_year_efficiency ?? '—'
+              ? fuelStore.detailedStats?.overall_stats.best_month_efficiency?.toFixed(2) ?? '—'
+              : fuelStore.detailedStats?.overall_stats.best_year_efficiency?.toFixed(2) ?? '—'
           }} km/L
         </p>
       </div>
+
       <div class="card stat-card">
         <h3>Total Distance</h3>
-        <p>{{ fuelStore.overallStats?.total_distance ?? '—' }} km</p>
+        <p>{{ fuelStore.overallStats?.total_distance?.toFixed(1) ?? '—' }} km</p>
       </div>
+
       <div class="card stat-card">
         <h3>Total Cost</h3>
-        <p>${{ fuelStore.overallStats?.total_cost ?? '—' }}</p>
+        <p>{{ fuelStore.overallStats?.total_cost?.toFixed(2) ?? '—' }} ₪</p>
       </div>
+
       <div class="card stat-card">
         <h3>Trips Logged</h3>
         <p>{{ fuelStore.overallStats?.entry_count ?? '—' }}</p>
       </div>
+
       <div class="card stat-card">
         <h3>Avg Cost/L</h3>
-        <p>${{ fuelStore.overallStats?.average_cost_per_liter ?? '—' }}/L</p>
+        <p>{{ fuelStore.overallStats?.average_cost_per_liter?.toFixed(2) ?? '—' }} ₪/L</p>
       </div>
     </div>
   </section>
@@ -115,7 +120,7 @@ function getStats(mode: Mode) {
 function getLabels(mode: Mode, stats: any[]): string[] {
   return stats.map((s) =>
     mode === 'month'
-      ? `${String(s.period_label).split('-')[1]}-${String(s.period_label).split('-')[0]}`
+      ? `${String(s.period_label).split('-')[1]}/${String(s.period_label).split('-')[0]}`
       : String(s.period_label)
   );
 }
@@ -137,14 +142,13 @@ function buildOptions(mode: Mode): ChartOptions<'line'> {
           display: true,
           text: mode === 'month' ? 'Month' : 'Year',
           color: '#f1f5f9',
-          padding: { top: 0.00001, bottom: 0.01},
         },
         ticks: { color: '#f1f5f9' },
       },
       y: {
         title: {
           display: true,
-          text: 'Efficiency in km/L',
+          text: 'Efficiency (km/L)',
           color: '#f1f5f9',
         },
         ticks: { color: '#f1f5f9' },
@@ -166,7 +170,7 @@ function initChart(): void {
     labels,
     datasets: [
       {
-        label: `Efficiency (${viewMode.value})`,
+        label: `Average Efficiency (${viewMode.value}) [km/L]`,
         data: dataset,
         borderColor: '#10b981',
         backgroundColor: 'rgba(16,185,129,0.2)',
@@ -194,7 +198,7 @@ function updateChart(): void {
 
   const stats = getStats(viewMode.value);
   chart.data.labels = getLabels(viewMode.value, stats);
-  chart.data.datasets[0].label = `Efficiency (${viewMode.value})`;
+  chart.data.datasets[0].label = `Average Efficiency (${viewMode.value}) [km/L]`;
   chart.data.datasets[0].data = getData(stats);
   chart.options = buildOptions(viewMode.value);
   chart.update();
