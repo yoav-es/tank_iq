@@ -166,3 +166,65 @@ Critical stability fixes and a comprehensive test suite ensure the API is robust
 - **Prioritize UX fixes first**: statistics graph orientation, summary table, filters.  
 - **Then add configuration options**: currency, export/purge.  
 - **Finally tackle deployment & theming**: dark mode, Docker, Makefile.  
+
+
+========================================================
+                 FUEL EFFICIENCY REPORT
+========================================================
+
+[ CONTROLS ]
+--------------------------------------------------------
+View: [ Yearly ▾ | Monthly ▾ ]
+If Yearly → Period: [ YYYY ▾ ]
+If Monthly → Period: [ YYYY-MM ▾ ]
+
+========================================================
+
+EXECUTIVE SUMMARY
+--------------------------------------------------------
+This report summarizes fuel efficiency and costs for the selected period. 
+Vehicles traveled a total of XXXX km, with an overall efficiency of XX km/L. 
+Total spending reached $XXXX, reflecting the combined fuel costs for this period. 
+Compared to previous periods, efficiency was higher/lower, and costs rose/fell accordingly.
+
+========================================================
+
+YEARLY ANALYSIS (View = Yearly)
+--------------------------------------------------------
+Fuel Efficiency Trends → [ Bar Chart, ordered oldest → newest ]
+Fuel Cost Trends       → [ Line Chart, ordered oldest → newest ]
+
+Yearly Summary Table (only selected year)
+--------------------------------------------------------
+Year | Efficiency (km/L) | Distance (km) | Total Cost
+--------------------------------------------------------
+2024 |        XX         |     XXXX      | $XXXX
+
+Insights
+--------------------------------------------------------
+Efficiency in 2024 averaged XX km/L, which is above/below the long‑term trend.  
+Total distance reached XXXX km, showing increased usage compared to earlier years.  
+Fuel costs of $XXXX were higher/lower than the multi‑year average, reflecting price or demand changes.
+
+========================================================
+
+MONTHLY ANALYSIS (View = Monthly)
+--------------------------------------------------------
+Fuel Efficiency Trends → [ Line Chart, ordered Jan → Dec ]
+Fuel Cost Trends       → [ Line Chart, ordered Jan → Dec ]
+
+Monthly Summary Table (only selected month)
+--------------------------------------------------------
+Month | Efficiency (km/L) | Fuel Cost | Price/L
+--------------------------------------------------------
+Mar   |        XX         |   $XXX    | $X.XX
+
+Insights
+--------------------------------------------------------
+In March 2024, efficiency was XX km/L, slightly above/below the yearly average.  
+Vehicles traveled XXXX km, consistent with seasonal driving patterns.  
+Fuel spending of $XXX was unusually high/low compared to other months in the same year.
+
+========================================================
+END OF REPORT
+========================================================
