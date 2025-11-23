@@ -228,3 +228,35 @@ Fuel spending of $XXX was unusually high/low compared to other months in the sam
 ========================================================
 END OF REPORT
 ========================================================
+
+# 📝 Work Session Summary – TankIQ Project
+
+## Fuel Store & Types
+- Reviewed and confirmed the **Pinia fuel-store** changes:
+  - Split loading flags into `isLoadingEntries` and `isLoadingStats`.
+  - Added `lastUpdated` timestamp for freshness tracking.
+- Walked through the **FuelEntryDB** and related TypeScript types to align chart logic with available fields.
+
+## Statistics View
+- Clarified the correct data sources:
+  - **Yearly charts** → use `monthly_stats` (aggregates).
+  - **Monthly charts** → use raw `entries` filtered by month.
+- Discussed why monthly charts collapse to one datapoint and how to fix it.
+- Explored visualization strategies for months with sparse vs. rich data:
+  - Scatter plots for raw entries.
+  - Hybrid overlays (aggregate + individual points).
+  - Adaptive chart types (bar for ≤2 entries, line for >2).
+- Drafted refactored watcher logic for scatter plots, though implementation needs further tuning.
+
+## Project Roadmap
+- Agreed on next steps:
+  1. **Touch up the Log View** for clarity and gather feedback.
+  2. Decide on **statistics visualization strategy** after feedback.
+  3. Implement **packaging**:
+     - Dockerfile for deployment.
+     - Makefile for build/test automation.
+
+## Key Insights
+- Data separation is already correct: yearly = aggregates, monthly = raw entries.
+- Visualization choice depends on entry density per month.
+- Packaging and deployment should follow once UI and stats are stable.

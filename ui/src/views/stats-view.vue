@@ -51,6 +51,7 @@
       </p>
     </section>
 
+
     <hr class="report-separator" />
 
     <!-- Yearly analysis -->
@@ -97,12 +98,10 @@
       </table>
     </section>
 
-    <!-- Insights moved to bottom -->
-    <section v-if="viewMode === 'yearly' && insightsYearlySelected.length" class="report-section">
+    <!-- Insights -->
+    <section v-if="viewMode === 'yearly' && insightsYearlySelected" class="report-section">
       <h2>Insights</h2>
-      <ul class="report-list">
-        <li v-for="i in insightsYearlySelected" :key="i">{{ i }}</li>
-      </ul>
+      <p class="insight-text">{{ insightsYearlySelected }}</p>
     </section>
 
     <hr class="report-separator" />
@@ -151,15 +150,14 @@
       </table>
     </section>
 
-    <!-- Insights moved to bottom -->
-    <section v-if="viewMode === 'monthly' && insightsMonthlySelected.length" class="report-section">
+    <!-- Insights -->
+    <section v-if="viewMode === 'monthly' && insightsMonthlySelected" class="report-section">
       <h2>Insights</h2>
-      <ul class="report-list">
-        <li v-for="i in insightsMonthlySelected" :key="i">{{ i }}</li>
-      </ul>
+      <p class="insight-text">{{ insightsMonthlySelected }}</p>
     </section>
   </div>
 </template>
+
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onUnmounted } from 'vue';
@@ -182,60 +180,14 @@ const detailedStats = computed<DetailedStats | null>(() => store.detailedStats ?
 const viewMode = ref<'yearly' | 'monthly'>('yearly');
 const selectedPeriod = ref<string>('');
 
-// Currency variable (configurable)
-const currencyCode = ref('ILS'); // change as needed
+// Currency
+const currencyCode = ref('ILS');
 const currency = (n: number): string =>
   Intl.NumberFormat(undefined, { style: 'currency', currency: currencyCode.value }).format(n);
 
-// Labels (old -> new for selectors)
-const yearlyLabels = computed(() => {
-  const ds = detailedStats.value;
-  return ds ? ds.yearly_stats.map(y => y.period_label).reverse() : [];
-});
-const monthlyLabels = computed(() => {
-  const ds = detailedStats.value;
-  return ds ? ds.monthly_stats.map(m => m.period_label).reverse() : [];
-});
-
-// Initialize selected period when data arrives or view changes
-watch([detailedStats, viewMode], () => {
-  const ds = detailedStats.value;
-  if (!ds) return;
-  if (viewMode.value === 'yearly') {
-    const labels = yearlyLabels.value;
-    if (labels.length && !labels.includes(selectedPeriod.value)) {
-      selectedPeriod.value = labels[labels.length - 1]; // default to latest year (rightmost)
-    }
-  } else {
-    const labels = monthlyLabels.value;
-    if (labels.length && !labels.includes(selectedPeriod.value)) {
-      selectedPeriod.value = labels[labels.length - 1]; // default to latest month (rightmost)
-    }
-  }
-}, { immediate: true });
-
-// Selected rows
-const selectedYearRow = computed(() => {
-  if (viewMode.value !== 'yearly') return null;
-  const ds = detailedStats.value;
-  if (!ds) return null;
-  return ds.yearly_stats.find(y => y.period_label === selectedPeriod.value) ?? null;
-});
-const selectedMonthRow = computed(() => {
-  if (viewMode.value !== 'monthly') return null;
-  const ds = detailedStats.value;
-  if (!ds) return null;
-  return ds.monthly_stats.find(m => m.period_label === selectedPeriod.value) ?? null;
-});
-
-// Header period label
-const headerPeriodLabel = computed(() => {
-  const ds = detailedStats.value;
-  if (!ds) return 'Period: —';
-  const firstYear = ds.yearly_stats[0]?.period_label ?? '—';
-  const lastYear = ds.yearly_stats[ds.yearly_stats.length - 1]?.period_label ?? '—';
-  return `Period: ${firstYear} – ${lastYear}`;
-});
+// Labels
+const yearlyLabels = computed(() => detailedStats.value?.yearly_stats.map(y => y.period_label).reverse() ?? []);
+const monthlyLabels = computed(() => detailedStats.value?.monthly_stats.map(m => m.period_label).reverse() ?? []);
 
 // Summary block
 const summaryBlock = computed(() => {
@@ -285,33 +237,70 @@ const summaryBlock = computed(() => {
   return null;
 });
 
-// Insights
-const insightsYearlySelected = computed<string[]>(() => {
-  const row = selectedYearRow.value;
-  if (!row) return [];
-  const items: string[] = [];
-  items.push(`${row.period_label} shows an average efficiency of ${row.average_km_per_liter.toFixed(2)} km/L.`);
-  if (row.average_km_per_liter < 12) {
-    items.push('Efficiency is below 12 km/L, suggesting maintenance or driving adjustments.');
+// Default latest period
+watch([detailedStats, viewMode], () => {
+  const ds = detailedStats.value;
+  if (!ds) return;
+  if (viewMode.value === 'yearly') {
+    const labels = yearlyLabels.value;
+    if (labels.length) selectedPeriod.value = labels[labels.length - 1];
+  } else {
+    const labels = monthlyLabels.value;
+    if (labels.length) selectedPeriod.value = labels[labels.length - 1];
   }
-  items.push(`Total distance was ${row.total_distance.toFixed(0)} km, indicating usage level for the year.`);
-  items.push(`Fuel costs reached ${currency(row.total_cost)}, reflecting price trends or higher demand.`);
-  return items;
+}, { immediate: true });
+
+// Selected rows
+const selectedYearRow = computed(() =>
+  viewMode.value === 'yearly'
+    ? detailedStats.value?.yearly_stats.find(y => y.period_label === selectedPeriod.value) ?? null
+    : null
+);
+const selectedMonthRow = computed(() =>
+  viewMode.value === 'monthly'
+    ? detailedStats.value?.monthly_stats.find(m => m.period_label === selectedPeriod.value) ?? null
+    : null
+);
+
+// Header
+const headerPeriodLabel = computed(() => {
+  const ds = detailedStats.value;
+  if (!ds) return 'Period: —';
+  const firstYear = ds.yearly_stats[0]?.period_label ?? '—';
+  const lastYear = ds.yearly_stats[ds.yearly_stats.length - 1]?.period_label ?? '—';
+  return `Period: ${firstYear} – ${lastYear}`;
 });
 
-const insightsMonthlySelected = computed<string[]>(() => {
+// Insight helpers
+function efficiencyInsight(value: number, avg: number) {
+  if (value > avg * 1.1) return "fuel consumption was higher than usual";
+  if (value < avg * 0.9) return "fuel consumption was lower than usual";
+  return "fuel consumption was close to average";
+}
+function distanceInsight(distance: number, avg: number) {
+  if (distance > avg * 1.1) return "you drove a lot more than usual";
+  if (distance < avg * 0.9) return "you drove less than you normally do";
+  return "your driving distance was typical";
+}
+
+// Yearly insights
+const insightsYearlySelected = computed<string>(() => {
+  const ds = detailedStats.value;
+  const row = selectedYearRow.value;
+  if (!ds || !row) return "";
+  const avgEff = ds.yearly_stats.reduce((s, y) => s + y.average_km_per_liter, 0) / ds.yearly_stats.length;
+  const avgDist = ds.yearly_stats.reduce((s, y) => s + y.total_distance, 0) / ds.yearly_stats.length;
+  return `During ${row.period_label}, ${efficiencyInsight(row.average_km_per_liter, avgEff)} and ${distanceInsight(row.total_distance, avgDist)}, making this period stand out compared to your usual driving.`;
+});
+
+// Monthly insights
+const insightsMonthlySelected = computed<string>(() => {
+  const ds = detailedStats.value;
   const row = selectedMonthRow.value;
-  if (!row) return [];
-  const items: string[] = [];
-  items.push(`${row.period_label} recorded an average efficiency of ${row.average_km_per_liter.toFixed(2)} km/L.`);
-  if (row.average_km_per_liter < 10) {
-    items.push('Efficiency dropped below 10 km/L, hinting at mechanical or driving-condition factors.');
-  }
-  items.push(`Fuel spending totaled ${currency(row.total_cost)} for the month.`);
-  if (typeof row.total_distance === 'number') {
-    items.push(`Vehicles traveled ${row.total_distance.toFixed(0)} km, consistent with seasonal patterns.`);
-  }
-  return items;
+  if (!ds || !row) return "";
+  const avgEff = ds.monthly_stats.reduce((s, m) => s + m.average_km_per_liter, 0) / ds.monthly_stats.length;
+  const avgDist = ds.monthly_stats.reduce((s, m) => s + m.total_distance, 0) / ds.monthly_stats.length;
+  return `In ${row.period_label}, ${efficiencyInsight(row.average_km_per_liter, avgEff)} and ${distanceInsight(row.total_distance, avgDist)}, giving the month its own driving profile.`;
 });
 
 // Chart refs
@@ -330,54 +319,42 @@ let monthlyCostChart: ChartJS | null = null;
 let yearlyDistanceChart: ChartJS | null = null;
 let monthlyDistanceChart: ChartJS | null = null;
 
-// Chart options with axis labels
-const chartOptions: ChartOptions = {
-  responsive: true,
-  animation: false,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: { labels: { color: 'var(--color-text)' } }
-  },
-  scales: {
-    x: {
-      title: { display: true, text: 'Period', color: 'var(--color-text)' },
-      ticks: { color: 'var(--color-text)' },
-      grid: { color: 'var(--color-border)' }
+// Chart options
+function chartOptionsWithUnit(yLabel: string, title: string): ChartOptions {
+  return {
+    responsive: true,
+    animation: false,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      title: { display: true, text: title, color: 'var(--color-text)', font: { size: 16 } }
     },
-    y: {
-      title: { display: true, text: 'Value', color: 'var(--color-text)' },
-      ticks: { color: 'var(--color-text)' },
-      grid: { color: 'var(--color-border)' }
+    scales: {
+      x: { title: { display: true, text: 'Period', color: 'var(--color-text)' } },
+      y: { title: { display: true, text: yLabel, color: 'var(--color-text)' } }
     }
-  }
-};
-
+  };
+}
 function arraysChanged(a: unknown[], b: unknown[]) {
   if (a.length !== b.length) return true;
   return a.some((val, i) => val !== b[i]);
 }
-
-function buildDataset(type: 'bar' | 'line', label: string, data: number[], color: string) {
-  if (type === 'bar') {
-    return { label, data, backgroundColor: color };
-  }
-  return { label, data, borderColor: color, tension: 0.3, fill: false };
+function buildDataset(type: 'bar' | 'line', data: number[], color: string) {
+  return type === 'bar'
+    ? { data, backgroundColor: color }
+    : { data, borderColor: color, tension: 0.3, fill: false };
 }
-
 function initOrUpdateChart(
   chart: ChartJS | null,
   canvas: HTMLCanvasElement | null,
   type: ChartType,
   labels: string[],
   data: number[],
-  dataset: any
+  dataset: any,
+  options: ChartOptions
 ): ChartJS | null {
   if (!chart && canvas) {
-    return new ChartJS(canvas, {
-      type,
-      data: { labels, datasets: [dataset] },
-      options: chartOptions
-    });
+    return new ChartJS(canvas, { type, data: { labels, datasets: [dataset] }, options });
   } else if (chart) {
     const needUpdate =
       arraysChanged(chart.data.labels as string[], labels) ||
@@ -385,95 +362,111 @@ function initOrUpdateChart(
     if (needUpdate) {
       chart.data.labels = labels;
       chart.data.datasets[0].data = data;
+      chart.options = options;
       chart.update();
     }
   }
   return chart;
 }
 
-// Build chart data (always old -> new)
-watch([detailedStats, viewMode, selectedPeriod], async ([ds]) => {
-  if (!ds) return;
-  await nextTick();
-
-  // Yearly charts (old -> new)
-  const yearlyLabelsData = ds.yearly_stats.map(y => y.period_label).reverse();
-  const yearlyEffData = ds.yearly_stats.map(y => y.average_km_per_liter).reverse();
-  const yearlyCostData = ds.yearly_stats.map(y => y.total_cost).reverse();
-  const yearlyDistData = ds.yearly_stats.map(y => y.total_distance).reverse();
-
-  yearlyEfficiencyChart = initOrUpdateChart(
-    yearlyEfficiencyChart,
-    yearlyEfficiencyCanvas.value,
-    'bar',
-    yearlyLabelsData,
-    yearlyEffData,
-    buildDataset('bar', 'Efficiency (km/L)', yearlyEffData, '#2196F3')
-  );
-
-  yearlyCostChart = initOrUpdateChart(
-    yearlyCostChart,
-    yearlyCostCanvas.value,
-    'line',
-    yearlyLabelsData,
-    yearlyCostData,
-    buildDataset('line', 'Fuel Cost', yearlyCostData, '#FF9800')
-  );
-
-  yearlyDistanceChart = initOrUpdateChart(
-    yearlyDistanceChart,
-    yearlyDistanceCanvas.value,
-    'line',
-    yearlyLabelsData,
-    yearlyDistData,
-    buildDataset('line', 'Distance (km)', yearlyDistData, '#9C27B0')
-  );
-
-  // Monthly charts (old -> new)
-  const monthlyLabelsData = ds.monthly_stats.map(m => m.period_label).reverse();
-  const monthlyEffData = ds.monthly_stats.map(m => m.average_km_per_liter).reverse();
-  const monthlyCostData = ds.monthly_stats.map(m => m.total_cost).reverse();
-  const monthlyDistData = ds.monthly_stats.map(m => m.total_distance).reverse();
-
-  monthlyEfficiencyChart = initOrUpdateChart(
-    monthlyEfficiencyChart,
-    monthlyEfficiencyCanvas.value,
-    'line',
-    monthlyLabelsData,
-    monthlyEffData,
-    buildDataset('line', 'Efficiency (km/L)', monthlyEffData, '#4CAF50')
-  );
-
-  monthlyCostChart = initOrUpdateChart(
-    monthlyCostChart,
-    monthlyCostCanvas.value,
-    'line',
-    monthlyLabelsData,
-    monthlyCostData,
-    buildDataset('line', 'Fuel Cost', monthlyCostData, '#FF9800')
-  );
-
-  monthlyDistanceChart = initOrUpdateChart(
-    monthlyDistanceChart,
-    monthlyDistanceCanvas.value,
-    'line',
-    monthlyLabelsData,
-    monthlyDistData,
-    buildDataset('line', 'Distance (km)', monthlyDistData, '#9C27B0')
-  );
-}, { immediate: true });
-
-// Destroy charts on unmount
-onUnmounted(() => {
+// Reset helper
+function resetCharts() {
   yearlyEfficiencyChart?.destroy();
   yearlyCostChart?.destroy();
   yearlyDistanceChart?.destroy();
   monthlyEfficiencyChart?.destroy();
   monthlyCostChart?.destroy();
   monthlyDistanceChart?.destroy();
+
+  yearlyEfficiencyChart = null;
+  yearlyCostChart = null;
+  yearlyDistanceChart = null;
+  monthlyEfficiencyChart = null;
+  monthlyCostChart = null;
+  monthlyDistanceChart = null;
+}
+
+// Watcher for charts
+// Watcher for charts
+watch([detailedStats, viewMode, selectedPeriod], async ([ds]) => {
+  if (!ds || !selectedPeriod.value) return;
+  await nextTick();
+
+  // reset before re‑init
+  resetCharts();
+
+  if (viewMode.value === 'yearly' && selectedYearRow.value) {
+    // filter monthly stats for the selected year
+    const yearKey = selectedYearRow.value.period_label; // e.g. "2024"
+    const monthsForYear = ds.monthly_stats.filter(m => m.period_label.startsWith(yearKey)).reverse();
+
+    const labels = monthsForYear.map(m => m.period_label);
+    const effData = monthsForYear.map(m => m.average_km_per_liter);
+    const costData = monthsForYear.map(m => m.total_cost);
+    const distData = monthsForYear.map(m => m.total_distance);
+
+    yearlyEfficiencyChart = initOrUpdateChart(
+      yearlyEfficiencyChart, yearlyEfficiencyCanvas.value, 'line',
+      labels, effData,
+      buildDataset('line', effData, '#2196F3'),
+      chartOptionsWithUnit('km/L', `Fuel Efficiency in ${yearKey}`)
+    );
+
+    yearlyCostChart = initOrUpdateChart(
+      yearlyCostChart, yearlyCostCanvas.value, 'line',
+      labels, costData,
+      buildDataset('line', costData, '#FF9800'),
+      chartOptionsWithUnit(currencyCode.value, `Fuel Cost in ${yearKey}`)
+    );
+
+    yearlyDistanceChart = initOrUpdateChart(
+      yearlyDistanceChart, yearlyDistanceCanvas.value, 'line',
+      labels, distData,
+      buildDataset('line', distData, '#9C27B0'),
+      chartOptionsWithUnit('km', `Distance Travelled in ${yearKey}`)
+    );
+  }
+
+  if (viewMode.value === 'monthly' && selectedMonthRow.value) {
+    // filter raw entries for the selected month
+    const monthKey = selectedMonthRow.value.period_label; // e.g. "2025-03"
+    const entriesForMonth = store.entries.filter(e =>
+      e.date?.startsWith(monthKey) // date is YYYY-MM-DD
+    ).reverse();
+    
+    const labels = entriesForMonth.map(e => e.date!);
+    const effData = entriesForMonth.map(e => e.km_per_liter);
+    const costData = entriesForMonth.map(e => e.total_cost);
+    const distData = entriesForMonth.map(e => e.distance);
+
+    monthlyEfficiencyChart = initOrUpdateChart(
+      monthlyEfficiencyChart, monthlyEfficiencyCanvas.value, 'line',
+      labels, effData,
+      buildDataset('line', effData, '#4CAF50'),
+      chartOptionsWithUnit('km/L', `Fuel Efficiency for ${monthKey}`)
+    );
+
+    monthlyCostChart = initOrUpdateChart(
+      monthlyCostChart, monthlyCostCanvas.value, 'line',
+      labels, costData,
+      buildDataset('line', costData, '#FF9800'),
+      chartOptionsWithUnit(currencyCode.value, `Fuel Cost for ${monthKey}`)
+    );
+
+    monthlyDistanceChart = initOrUpdateChart(
+      monthlyDistanceChart, monthlyDistanceCanvas.value, 'line',
+      labels, distData,
+      buildDataset('line', distData, '#9C27B0'),
+      chartOptionsWithUnit('km', `Distance Travelled in ${monthKey}`)
+    );
+  }
+}, { immediate: true });
+
+// Cleanup on unmount
+onUnmounted(() => {
+  resetCharts();
 });
 </script>
-
 <style scoped>
 /* ===== Report Container ===== */
 .report-container {
