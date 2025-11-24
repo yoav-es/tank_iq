@@ -3,6 +3,13 @@
   <section class="log">
     <h1>Log</h1>
 
+    <!-- Feedback message block -->
+    <transition name="fade">
+    <p v-if="feedbackMessage" :class="['feedback', feedbackType]">
+      {{ feedbackMessage }}
+    </p>
+    </transition>
+
     <!-- Add Entry Form -->
     <form class="add-form" @submit.prevent="onAddEntry">
       <div class="fields">
@@ -12,11 +19,11 @@
         </div>
         <div class="form-field">
           <label>Distance (km)</label>
-          <input v-model.number="newEntry.distance" type="number"  step="0.01" />
+          <input v-model.number="newEntry.distance" type="number" step="0.01" />
         </div>
         <div class="form-field">
           <label>Liters</label>
-          <input v-model.number="newEntry.liters" type="number"  step="0.01" />
+          <input v-model.number="newEntry.liters" type="number" step="0.01" />
         </div>
         <div class="form-field">
           <label>Price per Liter</label>
@@ -58,7 +65,6 @@
         </label>
       </div>
     </div>
-
 
     <!-- Entries Table -->
     <table>
@@ -107,6 +113,10 @@
     <div class="csv-import">
       <h2>Bulk Import</h2>
       <p>You can upload a CSV file to add multiple entries at once.</p>
+      <p>
+        <strong>Required column order:</strong>
+        <code>date,distance,liters,price_per_liter,notes</code>
+      </p>
       <input type="file" accept=".csv" @change="onCsvUpload" />
     </div>
   </section>
@@ -127,6 +137,20 @@ const filterText = ref('');
 const newEntry = ref<FuelEntryInput>(emptyEntry());
 const editingId = ref<number | null>(null);
 const editData = ref<FuelEntryInput>(emptyEntry());
+
+// Feedback state
+const feedbackMessage = ref("");
+const feedbackType = ref<"success" | "error" | "">("");
+
+// Helper to show feedback and auto‑clear
+function showFeedback(message: string, type: "success" | "error") {
+  feedbackMessage.value = message;
+  feedbackType.value = type;
+  setTimeout(() => {
+    feedbackMessage.value = "";
+    feedbackType.value = "";
+  }, 3000); // disappears after 3 seconds
+}
 
 // -------------------- Lifecycle --------------------
 onMounted(() => fuelStore.fetchEntriesAndStats());
@@ -158,17 +182,18 @@ const sortedEntries = computed<FuelEntryDB[]>(() => {
 });
 
 const visibleEntries = computed(() => {
-  return sortedEntries.value.slice(0, 5); // show only 6 entries
+  return sortedEntries.value.slice(0, 5); // show only 5 entries
 });
-
 
 // -------------------- Actions --------------------
 async function onAddEntry(): Promise<void> {
   try {
     await fuelStore.addEntry(newEntry.value);
     newEntry.value = emptyEntry();
+    showFeedback("Entry added successfully!", "success");
   } catch (err) {
     console.error('Failed to add entry', err);
+    showFeedback("Failed to add entry.", "error");
   }
 }
 
@@ -188,16 +213,20 @@ async function saveEdit(id: number): Promise<void> {
     await fuelStore.updateExistingEntry(id, editData.value);
     editingId.value = null;
     editData.value = emptyEntry();
+    showFeedback("Entry updated successfully!", "success");
   } catch (err) {
     console.error('Failed to update entry', err);
+    showFeedback("Failed to update entry.", "error");
   }
 }
 
 async function onDeleteEntry(id: number): Promise<void> {
   try {
     await fuelStore.removeEntry(id);
+    showFeedback("Entry deleted successfully!", "success");
   } catch (err) {
     console.error('Failed to delete entry', err);
+    showFeedback("Failed to delete entry.", "error");
   }
 }
 
@@ -216,17 +245,21 @@ function onCsvUpload(event: Event): void {
   if (!input.files?.length) return;
 
   const file = input.files[0];
-  console.log('CSV file selected:', file.name);
-
   const reader = new FileReader();
   reader.onload = async (e) => {
-    console.log('CSV file loaded');
     const text = e.target?.result as string;
     const rows = text.trim().split('\n');
 
+    // Header validation
+    const header = rows[0].trim().toLowerCase();
+    const expected = "date,distance,liters,price_per_liter,notes";
+    if (header !== expected) {
+      showFeedback(`Invalid CSV format. Expected header: ${expected}`, "error");
+      return;
+    }
+
     const entries = parseCsvRows(rows);
     let importedCount = 0;
-
     for (const entry of entries) {
       try {
         await fuelStore.addEntry(entry);
@@ -236,7 +269,7 @@ function onCsvUpload(event: Event): void {
       }
     }
 
-    console.log(`Imported ${importedCount} entries`);
+    showFeedback(`Imported ${importedCount} entries successfully.`, "success");
   };
 
   reader.readAsText(file);
@@ -261,9 +294,7 @@ function parseCsvRows(rows: string[]): FuelEntryInput[] {
     !isNaN(entry.price_per_liter)
   );
 }
-
 </script>
-
 <style scoped>
 /* Layout */
 .log {
@@ -438,4 +469,40 @@ function parseCsvRows(rows: string[]): FuelEntryInput[] {
   background-color: var(--color-input-bg);
   color: var(--color-text);
 }
+
+/* Feedback message styles */
+/* Toast-style feedback overlay */
+.feedback {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1000;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  font-weight: 500;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+/* Success and error colors */
+.feedback.success {
+  background-color: #e6ffed;
+  color: #1a7f37;
+  border: 1px solid #1a7f37;
+}
+.feedback.error {
+  background-color: #ffe6e6;
+  color: #a71d2a;
+  border: 1px solid #a71d2a;
+}
+
+/* Fade transition */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.5s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
 </style>

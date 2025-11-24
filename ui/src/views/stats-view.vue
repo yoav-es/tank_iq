@@ -14,7 +14,7 @@
       <h2>Controls</h2>
       <div style="display:flex; gap:1rem; align-items:center;">
         <label>
-          <strong>View:</strong>
+          <strong>View: </strong>
           <select v-model="viewMode">
             <option value="yearly">Yearly</option>
             <option value="monthly">Monthly</option>
@@ -22,7 +22,7 @@
         </label>
 
         <label v-if="viewMode === 'yearly'">
-          <strong>Period:</strong>
+          <strong>Period: </strong>
           <select v-model="selectedPeriod">
             <option v-for="y in yearlyLabels" :key="y" :value="y">{{ y }}</option>
           </select>
@@ -50,9 +50,7 @@
         and costs {{ summaryBlock.costCompare }}.
       </p>
     </section>
-
-
-    <hr class="report-separator" />
+    <hr v-if="summaryBlock" class="report-separator" />
 
     <!-- Yearly analysis -->
     <section v-if="viewMode === 'yearly' && detailedStats" class="report-section">
@@ -103,8 +101,7 @@
       <h2>Insights</h2>
       <p class="insight-text">{{ insightsYearlySelected }}</p>
     </section>
-
-    <hr class="report-separator" />
+    <hr v-if="viewMode === 'yearly' && insightsYearlySelected" class="report-separator" />
 
     <!-- Monthly analysis -->
     <section v-if="viewMode === 'monthly' && detailedStats" class="report-section">
@@ -155,9 +152,17 @@
       <h2>Insights</h2>
       <p class="insight-text">{{ insightsMonthlySelected }}</p>
     </section>
+    <hr v-if="viewMode === 'monthly' && insightsMonthlySelected" class="report-separator" />
+
+    <!-- Global Fuel Efficiency Distribution -->
+    <section v-if="detailedStats" class="report-section">
+      <h2>Fuel Efficiency Distribution</h2>
+      <div class="chart-wrap">
+        <canvas ref="efficiencyHistogramCanvas"></canvas>
+      </div>
+    </section>
   </div>
 </template>
-
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onUnmounted } from 'vue';
@@ -311,6 +316,9 @@ const monthlyCostCanvas = ref<HTMLCanvasElement | null>(null);
 const yearlyDistanceCanvas = ref<HTMLCanvasElement | null>(null);
 const monthlyDistanceCanvas = ref<HTMLCanvasElement | null>(null);
 
+// ADD: histogram ref
+const efficiencyHistogramCanvas = ref<HTMLCanvasElement | null>(null);
+
 // Chart instances
 let yearlyEfficiencyChart: ChartJS | null = null;
 let yearlyCostChart: ChartJS | null = null;
@@ -318,6 +326,9 @@ let monthlyEfficiencyChart: ChartJS | null = null;
 let monthlyCostChart: ChartJS | null = null;
 let yearlyDistanceChart: ChartJS | null = null;
 let monthlyDistanceChart: ChartJS | null = null;
+
+// ADD: histogram chart instance
+let efficiencyHistogramChart: ChartJS | null = null;
 
 // Chart options
 function chartOptionsWithUnit(yLabel: string, title: string): ChartOptions {
@@ -387,7 +398,6 @@ function resetCharts() {
 }
 
 // Watcher for charts
-// Watcher for charts
 watch([detailedStats, viewMode, selectedPeriod], async ([ds]) => {
   if (!ds || !selectedPeriod.value) return;
   await nextTick();
@@ -396,8 +406,7 @@ watch([detailedStats, viewMode, selectedPeriod], async ([ds]) => {
   resetCharts();
 
   if (viewMode.value === 'yearly' && selectedYearRow.value) {
-    // filter monthly stats for the selected year
-    const yearKey = selectedYearRow.value.period_label; // e.g. "2024"
+    const yearKey = selectedYearRow.value.period_label;
     const monthsForYear = ds.monthly_stats.filter(m => m.period_label.startsWith(yearKey)).reverse();
 
     const labels = monthsForYear.map(m => m.period_label);
@@ -428,45 +437,96 @@ watch([detailedStats, viewMode, selectedPeriod], async ([ds]) => {
   }
 
   if (viewMode.value === 'monthly' && selectedMonthRow.value) {
-    // filter raw entries for the selected month
-    const monthKey = selectedMonthRow.value.period_label; // e.g. "2025-03"
+    const monthKey = selectedMonthRow.value.period_label;
     const entriesForMonth = store.entries.filter(e =>
-      e.date?.startsWith(monthKey) // date is YYYY-MM-DD
+      e.date?.startsWith(monthKey)
     ).reverse();
-    
+
     const labels = entriesForMonth.map(e => e.date!);
     const effData = entriesForMonth.map(e => e.km_per_liter);
     const costData = entriesForMonth.map(e => e.total_cost);
     const distData = entriesForMonth.map(e => e.distance);
 
     monthlyEfficiencyChart = initOrUpdateChart(
-      monthlyEfficiencyChart, monthlyEfficiencyCanvas.value, 'line',
+      monthlyEfficiencyChart, monthlyEfficiencyCanvas.value, 'bar',
       labels, effData,
-      buildDataset('line', effData, '#4CAF50'),
+      buildDataset('bar', effData, '#4CAF50'),
       chartOptionsWithUnit('km/L', `Fuel Efficiency for ${monthKey}`)
     );
 
     monthlyCostChart = initOrUpdateChart(
-      monthlyCostChart, monthlyCostCanvas.value, 'line',
+      monthlyCostChart, monthlyCostCanvas.value, 'bar',
       labels, costData,
-      buildDataset('line', costData, '#FF9800'),
+      buildDataset('bar', costData, '#FF9800'),
       chartOptionsWithUnit(currencyCode.value, `Fuel Cost for ${monthKey}`)
     );
 
     monthlyDistanceChart = initOrUpdateChart(
-      monthlyDistanceChart, monthlyDistanceCanvas.value, 'line',
+      monthlyDistanceChart, monthlyDistanceCanvas.value, 'bar',
       labels, distData,
-      buildDataset('line', distData, '#9C27B0'),
+      buildDataset('bar', distData, '#9C27B0'),
       chartOptionsWithUnit('km', `Distance Travelled in ${monthKey}`)
     );
   }
 }, { immediate: true });
 
+// --- Histogram logic ---
+function computeEfficiencyHistogramBins(): { labels: string[]; counts: number[] } {
+  const entries = store.entries;
+  if (!entries?.length) return { labels: [], counts: [] };
+
+  const efficiencies = entries
+    .filter(e => e.distance && e.liters)
+    .map(e => e.distance / e.liters);
+
+  if (!efficiencies.length) return { labels: [], counts: [] };
+
+  const minEff = Math.floor(Math.min(...efficiencies) / 2) * 2;
+  const maxEff = Math.ceil(Math.max(...efficiencies) / 2) * 2;
+
+  const labels: string[] = [];
+  const counts: number[] = [];
+
+  for (let b = minEff; b < maxEff; b += 2) {
+    labels.push(`${b}–${b + 2} km/L`);
+    counts.push(efficiencies.filter(v => v >= b && v < b + 2).length);
+  }
+
+  return { labels, counts };
+}
+
+function buildGlobalEfficiencyHistogram() {
+  const { labels, counts } = computeEfficiencyHistogramBins();
+  if (!efficiencyHistogramCanvas.value) return;
+
+  efficiencyHistogramChart = initOrUpdateChart(
+    efficiencyHistogramChart,
+    efficiencyHistogramCanvas.value,
+    'bar',
+    labels,
+    counts,
+    { data: counts, backgroundColor: '#607D8B' },
+    chartOptionsWithUnit('Count', 'Fuel Efficiency Distribution')
+  );
+}
+
+// Watcher for histogram
+watch([detailedStats, () => store.entries], async () => {
+  await nextTick();
+  buildGlobalEfficiencyHistogram();
+}, { immediate: true });
+
 // Cleanup on unmount
 onUnmounted(() => {
   resetCharts();
+  efficiencyHistogramChart?.destroy();
+  efficiencyHistogramChart = null;
+
 });
 </script>
+
+
+
 <style scoped>
 /* ===== Report Container ===== */
 .report-container {
@@ -589,6 +649,7 @@ section > h2,
   background-color: var(--color-row-hover);
   transition: background-color 0.2s ease;
 }
+
 
 /* ===== Print Styles ===== */
 @media print {
