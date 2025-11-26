@@ -237,3 +237,20 @@ def get_custom_range_stats(start_date: str, end_date: str) -> TimePeriodStats:
             average_km_per_liter=round(avg_km_per_liter, 2),
             average_cost_per_liter=round(avg_cost_per_liter, 2),
         )
+    
+
+def delete_all_entries() -> bool:
+    """Delete ALL fuel entries and shrink the database file."""
+    with get_db() as conn:
+        try:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM fuel_entries")
+            conn.commit()
+
+            # Reclaim space
+            conn.execute("VACUUM")
+            logger.info("Purged all entries and vacuumed database.")
+            return True
+        except Exception as e:
+            logger.error("Error purging entries: %s", e)
+            return False

@@ -107,5 +107,34 @@ export const useFuelStore = defineStore('fuel', {
         this.isLoadingStats = false;
       }
     },
+        // Purge all entries
+    async clearAllEntries(): Promise<void> {
+      try {
+        // Call backend to delete everything
+        await apiService.purgeEntries();
+
+        // Reset local state
+        this.entries = [];
+        this.overallStats = null;
+        this.detailedStats = null;
+
+        // Optionally refresh to confirm backend state
+        // await this.fetchEntriesAndStats();
+      } catch (err: unknown) {
+        this.error = err instanceof Error ? err.message : 'Unknown error';
+        throw err;
+      }
+    },
+
+    // Export CSV from backend (optional)
+    async exportEntriesCsv(): Promise<string> {
+      try {
+        const csv = await apiService.exportEntriesCsv();
+        return csv;
+      } catch (err: unknown) {
+        this.error = err instanceof Error ? err.message : 'Unknown error';
+        throw err;
+      }
+    }
   },
 });

@@ -66,3 +66,16 @@ export const getDetailedStats = async (): Promise<DetailedStats> => {
   });
   return handleResponse<DetailedStats>(response);
 };
+
+// api-service.ts
+export async function purgeEntries(): Promise<void> {
+  const res = await fetch(`${BASE_URL}/entries/`, { method: 'DELETE' }); // use BASE_URL
+  if (!res.ok) throw new Error('Failed to purge entries');
+}
+
+export async function exportEntriesCsv(): Promise<string> {
+  const res = await fetch(`${BASE_URL}/entries/export`, { method: 'GET' }); // use BASE_URL
+  if (!res.ok) throw new Error('Failed to export CSV');
+  return await res.text();
+}
+

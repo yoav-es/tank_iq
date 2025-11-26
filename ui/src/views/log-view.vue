@@ -117,8 +117,16 @@
         <strong>Required column order:</strong>
         <code>date,distance,liters,price_per_liter,notes</code>
       </p>
-      <input type="file" accept=".csv" @change="onCsvUpload" />
+
+      <div class="import-row">
+        <input type="file" accept=".csv" @change="onCsvUpload" />
+        <div class="bulk-actions">
+          <button @click="onExportCsv" class="export-btn">Export CSV</button>
+          <button @click="onPurgeDatabase" class="purge-btn">Purge ✖</button>
+        </div>
+      </div>
     </div>
+
   </section>
 </template>
 
@@ -273,6 +281,37 @@ function onCsvUpload(event: Event): void {
   };
 
   reader.readAsText(file);
+}
+// -------------------- Export CSV --------------------
+function onExportCsv(): void {
+  const header = "date,distance,liters,price_per_liter,notes\n";
+  const rows = fuelStore.entries.map(e =>
+    `${e.date},${e.distance},${e.liters},${e.price_per_liter},${e.notes || ""}`
+  );
+  const csvContent = header + rows.join("\n");
+
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", "fuel_log.csv");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  showFeedback("CSV exported successfully!", "success");
+}
+
+// -------------------- Purge Database --------------------
+async function onPurgeDatabase(): Promise<void> {
+  if (!confirm("Are you sure you want to delete ALL entries?")) return;
+  try {
+    await fuelStore.clearAllEntries(); // implement in your store
+    showFeedback("All entries removed successfully!", "success");
+  } catch (err) {
+    console.error("Failed to purge database", err);
+    showFeedback("Failed to purge database.", "error");
+  }
 }
 
 function parseCsvRows(rows: string[]): FuelEntryInput[] {
@@ -450,7 +489,26 @@ function parseCsvRows(rows: string[]): FuelEntryInput[] {
 
 /* Bulk Import */
 .log .csv-import {
-  padding-top: var(--space-xs);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+/* Bulk Import row layout */
+.log .csv-import .import-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.log .csv-import input[type="file"] {
+  flex: 1;
+  min-width: 200px;
+}
+
+.log .csv-import .bulk-actions {
+  display: flex;
+  gap: var(--space-sm);
 }
 
 .log .csv-import h2 {
@@ -470,6 +528,9 @@ function parseCsvRows(rows: string[]): FuelEntryInput[] {
   padding: var(--space-xs);
   background-color: var(--color-input-bg);
   color: var(--color-text);
+  width: auto;
+  flex: 0 0 auto;
+  min-width: unset;
 }
 
 /* Feedback message styles */

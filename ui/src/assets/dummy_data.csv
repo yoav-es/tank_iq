@@ -1,4 +1,4 @@
-date,distance,liters,price_per_liter
+date,distance,liters,price_per_liter,notes
 2017-11-15,512,42.005,5.85
 2017-11-30,612,44.639,5.95
 2017-12-25,700,44.493,6.01

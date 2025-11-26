@@ -167,3 +167,18 @@ def delete_fuel_entry(entry_id: int) -> None:
 
     logger.info("Successfully deleted entry ID: %s", entry_id)
     return None
+
+@router.delete("/entries/", status_code=status.HTTP_204_NO_CONTENT, tags=["Maintenance"])
+def purge_all_entries() -> None:
+    """Delete ALL fuel entries and vacuum the database."""
+    logger.warning("Received DELETE request to purge ALL entries.")
+
+    success = database.delete_all_entries()
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to purge entries."
+        )
+
+    logger.info("Successfully purged all entries and vacuumed database.")
+    return None
