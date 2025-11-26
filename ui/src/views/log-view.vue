@@ -295,6 +295,8 @@ function parseCsvRows(rows: string[]): FuelEntryInput[] {
   );
 }
 </script>
+
+
 <style scoped>
 /* Layout */
 .log {

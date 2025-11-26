@@ -58,8 +58,6 @@
 
     <!-- Footer -->
     <footer class="footer">
-      <button>Quick Links</button>
-      <button @click="exportCsv">Export CSV</button>
       <button @click="toggleDarkMode">Dark Mode</button>
     </footer>
   </div>

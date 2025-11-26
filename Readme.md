@@ -5,47 +5,47 @@ This project follows the Airbnb JavaScript Style Guide for typescript and pep8 f
 
 
 TankIQ/
-├── app/                        # Core application logic
-│   ├── __init__.py             # Initializes the app package
-│   ├── models.py               # Defines FuelEntry class and data schema
-│   ├── database.py             # Handles SQLite connection and setup
-│   ├── routes.py               # FastAPI endpoints for CRUD operations
-│   ├── utils.py                # Fuel statistics and calculations
-│   └── plots.py                # Graph generation with matplotlib/seaborn
-├── tests/                      
-├── ui/                         
-|    ├── src 
-|    │    ├── router/                
-|    │    │    └── index.ts           
-|    │    ├── services/              
-|    │    │    └── api-services.ts     
-|    │    ├── stores/                
-|    │    │    ├── fuel-store.ts
-|    │    │    └── layout-store.ts  
-|    │    ├── types/                  
-|    │    │    └── fuelEntry.ts  
-|    │    ├── views/                  
-|    │    │    ├── dashboard-view.vue
-|    │    │    ├── log-view.vue
-|    │    │    └── stats-view.vue
-|    |    ├── App.vue
-|    |    ├── main.css
-|    |    └── main.ts
+|-app/                        # Core application logic
+│   |- __init__.py             # Initializes the app package
+│   |- models.py               # Defines FuelEntry class and data schema
+│   |- database.py             # Handles SQLite connection and setup
+│   |- routes.py               # FastAPI endpoints for CRUD operations
+│   |- utils.py                # Fuel statistics and calculations
+│   |- plots.py                # Graph generation with matplotlib/seaborn
+|- tests/                      
+|- ui/                         
+|    |- src 
+|    │    |- router/                
+|    │    │    |- index.ts           
+|    │    |- services/              
+|    │    │    |- api-services.ts     
+|    │    |- stores/                
+|    │    │    |- fuel-store.ts
+|    │    │    |- layout-store.ts  
+|    │    |- types/                  
+|    │    │    - fuelEntry.ts  
+|    │    |- views/                  
+|    │    │    |- dashboard-view.vue
+|    │    │    |- log-view.vue
+|    │    │    |- stats-view.vue
+|    |    |- App.vue
+|    |    |- main.css
+|    |    |- main.ts
 |    |      
-|    ├── index.html
-|    ├── package-lock.json
-|    ├── package.json
-|    ├── tsconfig.json
-|    └── vite.comfig.json
+|    |- index.html
+|    |- package-lock.json
+|    |- package.json
+|    |- tsconfig.json
+|    |- vite.comfig.json
 |
-├── fuel_log.db 
-├── main.py                     # Entry point to run the FastAPI app
-├── requirements.txt            # Python dependencies
-├── package-lock.json
-├── package.json
-├── pyproject.tomel
-├── package.json
-└── README.md                   # Project overview and instructions
+|-- fuel_log.db 
+|-- main.py                     # Entry point to run the FastAPI app
+|-- requirements.txt            # Python dependencies
+|-- package-lock.json
+|-- package.json
+|-- pyproject.tomel
+|-- package.json
+|-- README.md                   # Project overview and instructions
 
 - models.py: Defines the structure of a fuel entry (date, liters, price, odometer, etc.)
 - database.py: Creates and connects to the SQLite database
@@ -250,8 +250,6 @@ END OF REPORT
 
 ## Project Roadmap
 - Agreed on next steps:
-  1. **Touch up the Log View** for clarity and gather feedback.
-  2. Decide on **statistics visualization strategy** after feedback.
   3. Implement **packaging**:
      - Dockerfile for deployment.
      - Makefile for build/test automation.
