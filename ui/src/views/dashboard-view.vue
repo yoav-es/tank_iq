@@ -1,18 +1,21 @@
 <!-- ui/src/views/dashboard-view.vue -->
+<!-- ui/src/views/dashboard.vue -->
 <template>
   <section class="dashboard">
-    <h1 class="page-title">📊 Dashboard</h1>
+    <h1 class="dashboard__title">📊 Dashboard</h1>
 
     <!-- Toggle Buttons -->
-    <div class="toggle-buttons">
+    <div class="dashboard__toggle-buttons">
       <button
-        :class="{ active: viewMode === 'month' }"
+        class="dashboard__toggle-btn"
+        :class="{ 'dashboard__toggle-btn--active': viewMode === 'month' }"
         @click="viewMode = 'month'"
       >
         Monthly
       </button>
       <button
-        :class="{ active: viewMode === 'year' }"
+        class="dashboard__toggle-btn"
+        :class="{ 'dashboard__toggle-btn--active': viewMode === 'year' }"
         @click="viewMode = 'year'"
       >
         Yearly
@@ -20,19 +23,21 @@
     </div>
 
     <!-- Graph Section -->
-    <div class="card graph-card">
-      <h3>Average Fuel Efficiency (km/L)</h3>
+    <div class="card dashboard__graph-card">
+      <h3 class="dashboard__graph-title">Average Fuel Efficiency (km/L)</h3>
       <canvas ref="chartRef"></canvas>
     </div>
 
     <!-- Stats Grid -->
-    <div class="cards-grid">
-      <div class="card stat-card">
+    <div class="dashboard__cards-grid">
+      <div class="card dashboard__stat-card">
         <h3>Current Avg</h3>
-        <p>{{ fuelStore.overallStats?.average_km_per_liter?.toFixed(2) ?? '—' }} km/L</p>
+        <p>
+          {{ fuelStore.overallStats?.average_km_per_liter?.toFixed(2) ?? '—' }} km/L
+        </p>
       </div>
 
-      <div class="card stat-card">
+      <div class="card dashboard__stat-card">
         <h3>Best {{ viewMode === 'month' ? 'Month' : 'Year' }}</h3>
         <p>
           {{
@@ -43,28 +48,29 @@
         </p>
       </div>
 
-      <div class="card stat-card">
+      <div class="card dashboard__stat-card">
         <h3>Total Distance</h3>
         <p>{{ fuelStore.overallStats?.total_distance?.toFixed(1) ?? '—' }} km</p>
       </div>
 
-      <div class="card stat-card">
+      <div class="card dashboard__stat-card">
         <h3>Total Cost</h3>
         <p>{{ fuelStore.overallStats?.total_cost?.toFixed(2) ?? '—' }} ₪</p>
       </div>
 
-      <div class="card stat-card">
+      <div class="card dashboard__stat-card">
         <h3>Trips Logged</h3>
         <p>{{ fuelStore.overallStats?.entry_count ?? '—' }}</p>
       </div>
 
-      <div class="card stat-card">
+      <div class="card dashboard__stat-card">
         <h3>Avg Cost/L</h3>
         <p>{{ fuelStore.overallStats?.average_cost_per_liter?.toFixed(2) ?? '—' }} ₪/L</p>
       </div>
     </div>
   </section>
 </template>
+
 
 <script setup lang="ts">
 import { ref, shallowRef, markRaw, toRaw, onMounted, onUnmounted, watch, nextTick } from 'vue';
@@ -206,74 +212,99 @@ function updateChart(): void {
 </script>
 
 <style scoped>
+/* ==========================================================================
+   Dashboard page
+   ========================================================================== */
+
 .page-title {
-  font-size: 2rem;
-  font-weight: bold;
+  font-size: var(--font-size-xl);
+  font-weight: 600;
   border-bottom: 2px solid var(--color-accent);
   padding-bottom: var(--space-xs);
 }
 
+/* Dashboard layout */
 .dashboard {
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
 }
 
-.toggle-buttons {
+/* Toggle buttons */
+.dashboard__toggle {
   display: flex;
   gap: var(--space-xs);
 }
-.toggle-buttons button {
+
+.dashboard__toggle-button {
+  /* baseline button styles come from global .button */
   padding: var(--space-xs) var(--space-md);
   border: 1px solid var(--color-accent);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: var(--color-surface);
   color: var(--color-text);
   cursor: pointer;
-  font-weight: bold;
-}
-.toggle-buttons button.active {
-  background: var(--color-accent);
-  color: #fff;
+  font-weight: 600;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
 }
 
-.graph-card {
+.dashboard__toggle-button--active {
+  background: var(--color-accent);
+  color: var(--color-surface-strong, #fff);
+}
+
+/* Graph card */
+.dashboard__graph-card {
   background: var(--color-card);
   padding: var(--space-md);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   height: 440px;
   min-height: 440px;
   overflow: hidden;
 }
 
-.cards-grid {
+/* Stats grid */
+.dashboard__cards-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--space-sm);
 }
-.stat-card {
-  background: #f9e65c;
-  border-radius: 10px;
+
+/* Stat card */
+.dashboard__stat-card {
+  background: var(--color-highlight, #f9e65c); /* fallback if not defined */
+  border-radius: var(--radius-md);
   padding: var(--space-sm);
   text-align: center;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
-.stat-card h3 {
-  color: #333;
+
+.dashboard__stat-card-title {
+  color: var(--color-text-strong, #333);
   margin-bottom: var(--space-xs);
-  font-size: 0.9rem;
-}
-.stat-card p {
-  font-size: 1rem;
-  font-weight: bold;
-  color: #000;
+  font-size: var(--font-size-md);
 }
 
+.dashboard__stat-card-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text-strong, #000);
+}
+
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+
 @media (max-width: 768px) {
-  .cards-grid { grid-template-columns: repeat(2, 1fr); }
+  .dashboard__cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
+
 @media (max-width: 480px) {
-  .cards-grid { grid-template-columns: 1fr; }
+  .dashboard__cards-grid {
+    grid-template-columns: 1fr;
+  }
 }
-</style>
+</style>  

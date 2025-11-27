@@ -1,49 +1,50 @@
 <!-- ui/src/views/log-view.vue -->
+<!-- ui/src/views/log-view.vue -->
 <template>
   <section class="log">
-    <h1>Log</h1>
+    <h1 class="log__headline">Log</h1>
 
     <!-- Feedback message block -->
     <transition name="fade">
-    <p v-if="feedbackMessage" :class="['feedback', feedbackType]">
-      {{ feedbackMessage }}
-    </p>
+      <p v-if="feedbackMessage" :class="['feedback', `feedback--${feedbackType}`]">
+        {{ feedbackMessage }}
+      </p>
     </transition>
 
     <!-- Add Entry Form -->
-    <form class="add-form" @submit.prevent="onAddEntry">
-      <div class="fields">
-        <div class="form-field">
-          <label>Date</label>
-          <input v-model="newEntry.date" type="date" required />
+    <form class="log__add-form" @submit.prevent="onAddEntry">
+      <div class="log__fields">
+        <div class="log__field">
+          <label class="log__label">Date</label>
+          <input v-model="newEntry.date" type="date" required class="log__input" />
         </div>
-        <div class="form-field">
-          <label>Distance (km)</label>
-          <input v-model.number="newEntry.distance" type="number" step="0.01" />
+        <div class="log__field">
+          <label class="log__label">Distance (km)</label>
+          <input v-model.number="newEntry.distance" type="number" step="0.01" class="log__input" />
         </div>
-        <div class="form-field">
-          <label>Liters</label>
-          <input v-model.number="newEntry.liters" type="number" step="0.01" />
+        <div class="log__field">
+          <label class="log__label">Liters</label>
+          <input v-model.number="newEntry.liters" type="number" step="0.01" class="log__input" />
         </div>
-        <div class="form-field">
-          <label>Price per Liter</label>
-          <input v-model.number="newEntry.price_per_liter" type="number" step="0.01" />
+        <div class="log__field">
+          <label class="log__label">Price per Liter</label>
+          <input v-model.number="newEntry.price_per_liter" type="number" step="0.01" class="log__input" />
         </div>
-        <div class="form-field">
-          <label>Notes</label>
-          <input v-model="newEntry.notes" type="text" />
+        <div class="log__field">
+          <label class="log__label">Notes</label>
+          <input v-model="newEntry.notes" type="text" class="log__input" />
         </div>
       </div>
 
-      <button type="submit" class="add-btn">Add Entry</button>
+      <button type="submit" class="log__add-btn">Add Entry</button>
     </form>
 
     <!-- Controls -->
-    <div class="controls">
-      <div class="control">
+    <div class="log__controls">
+      <div class="log__control">
         <label>
           Sort:
-          <select class="ui-select" v-model="sortField">
+          <select v-model="sortField" class="select">
             <option value="date">Date</option>
             <option value="distance">Distance</option>
             <option value="liters">Liters</option>
@@ -51,23 +52,23 @@
             <option value="total_cost">Total Cost</option>
             <option value="km_per_liter">Efficiency</option>
           </select>
-          <select class="ui-select" v-model="sortOrder">
+          <select v-model="sortOrder" class="select">
             <option value="newest">Descending</option>
             <option value="oldest">Ascending</option>
           </select>
         </label>
       </div>
 
-      <div class="control">
+      <div class="log__control">
         <label>
           Filter by notes:
-          <input v-model="filterText" placeholder="Search notes..." />
+          <input v-model="filterText" placeholder="Search notes..." class="input" />
         </label>
       </div>
     </div>
 
     <!-- Entries Table -->
-    <table>
+    <table class="log__table">
       <thead>
         <tr>
           <th>Date</th>
@@ -83,52 +84,70 @@
       <tbody>
         <tr v-for="entry in visibleEntries" :key="entry.id">
           <td v-if="editingId !== entry.id">{{ formatDate(entry.date) }}</td>
-          <td v-else><input v-model="editData.date" type="date" /></td>
+          <td v-else><input v-model="editData.date" type="date" class="input" /></td>
 
           <td v-if="editingId !== entry.id">{{ entry.distance }}</td>
-          <td v-else><input v-model.number="editData.distance" type="number" /></td>
+          <td v-else><input v-model.number="editData.distance" type="number" class="input" /></td>
 
           <td v-if="editingId !== entry.id">{{ entry.liters }}</td>
-          <td v-else><input v-model.number="editData.liters" type="number" /></td>
+          <td v-else><input v-model.number="editData.liters" type="number" class="input" /></td>
 
           <td v-if="editingId !== entry.id">{{ entry.price_per_liter }}</td>
-          <td v-else><input v-model.number="editData.price_per_liter" type="number" step="0.01" /></td>
+          <td v-else><input v-model.number="editData.price_per_liter" type="number" step="0.01" class="input" /></td>
 
           <td>{{ entry.total_cost.toFixed(2) }}</td>
           <td>{{ entry.km_per_liter.toFixed(2) }}</td>
 
           <td v-if="editingId !== entry.id">{{ entry.notes }}</td>
-          <td v-else><input v-model="editData.notes" type="text" /></td>
+          <td v-else><input v-model="editData.notes" type="text" class="input" /></td>
 
-          <td class="actions">
-            <button v-if="editingId !== entry.id" @click="startEdit(entry)" class="edit-btn">Edit</button>
-            <button v-else @click="saveEdit(entry.id)" class="save-btn">Save</button>
-            <button @click="onDeleteEntry(entry.id)" class="delete-btn">Delete</button>
+          <td class="log__actions">
+            <button
+              v-if="editingId !== entry.id"
+              @click="startEdit(entry)"
+              class="log__edit-btn"
+            >
+              Edit
+            </button>
+            <button
+              v-else
+              @click="saveEdit(entry.id)"
+              class="log__save-btn"
+            >
+              Save
+            </button>
+            <button
+              @click="onDeleteEntry(entry.id)"
+              class="log__delete-btn"
+            >
+              Delete
+            </button>
           </td>
         </tr>
       </tbody>
     </table>
 
     <!-- Bulk Import -->
-    <div class="csv-import">
-      <h2>Bulk Import</h2>
-      <p>You can upload a CSV file to add multiple entries at once.</p>
-      <p>
+    <div class="log__csv-import">
+      <h2 class="log__csv-title">Bulk Import</h2>
+      <p class="log__csv-desc">You can upload a CSV file to add multiple entries at once.</p>
+      <p class="log__csv-desc">
         <strong>Required column order:</strong>
         <code>date,distance,liters,price_per_liter,notes</code>
       </p>
 
-      <div class="import-row">
-        <input type="file" accept=".csv" @change="onCsvUpload" />
-        <div class="bulk-actions">
-          <button @click="onExportCsv" class="export-btn">Export CSV</button>
-          <button @click="onPurgeDatabase" class="purge-btn">Purge ✖</button>
+      <div class="log__import-row">
+        <input type="file" accept=".csv" @change="onCsvUpload" class="input input--file" />
+        <div class="log__bulk-actions">
+          <button @click="onExportCsv" class="button button--secondary">Export CSV</button>
+          <button @click="onPurgeDatabase" class="button button--danger">Purge ✖</button>
         </div>
       </div>
     </div>
-
   </section>
 </template>
+
+
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
@@ -335,9 +354,11 @@ function parseCsvRows(rows: string[]): FuelEntryInput[] {
 }
 </script>
 
-
 <style scoped>
-/* Layout */
+/* ==========================================================================
+   Log view
+   ========================================================================== */
+
 .log {
   display: flex;
   flex-direction: column;
@@ -345,8 +366,8 @@ function parseCsvRows(rows: string[]): FuelEntryInput[] {
 }
 
 /* Headline */
-.log h1 {
-  font-size: 1.8rem;
+.log__headline {
+  font-size: var(--font-size-xl);
   font-weight: 600;
   margin-bottom: var(--space-sm);
   color: var(--color-text-strong);
@@ -355,7 +376,7 @@ function parseCsvRows(rows: string[]): FuelEntryInput[] {
 }
 
 /* Add Entry Form */
-.log .add-form {
+.log__add-form {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
@@ -365,49 +386,60 @@ function parseCsvRows(rows: string[]): FuelEntryInput[] {
   margin-bottom: var(--space-sm);
 }
 
-.log .fields {
+.log__fields {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-sm);
   width: 100%;
 }
 
-.log .form-field {
+.log__field {
   flex: 1 1 200px;
   min-width: 160px;
   display: flex;
   flex-direction: column;
 }
 
-.log .form-field > label {
+.log__label {
   margin-bottom: var(--space-xs);
   font-weight: 500;
   color: var(--color-text);
 }
 
-.log .form-field > input {
+.log__input {
   width: 100%;
   border: 1px solid var(--color-border);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   padding: var(--space-xs) var(--space-sm);
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
   background-color: var(--color-input-bg);
   color: var(--color-text);
 }
 
 /* Add Entry button */
-.log .add-btn {
+.log__add-btn {
   align-self: flex-start;
   background-color: var(--color-success);
   color: #fff;
   font-weight: 500;
   margin-top: var(--space-xs);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--font-size-md);
+  transition: background-color var(--transition-fast);
 }
-.log .add-btn:hover { background-color: var(--color-success-hover); }
-.log .add-btn:disabled { background-color: var(--color-border); cursor: not-allowed; }
+.log__add-btn:hover {
+  background-color: var(--color-success-hover);
+}
+.log__add-btn:disabled {
+  background-color: var(--color-border);
+  cursor: not-allowed;
+}
 
 /* Controls */
-.log .controls {
+.log__controls {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -415,116 +447,120 @@ function parseCsvRows(rows: string[]): FuelEntryInput[] {
   margin-bottom: var(--space-sm);
 }
 
-.log .control {
+.log__control {
   display: flex;
   align-items: center;
   gap: var(--space-xs);
   white-space: nowrap;
 }
 
-.log .control select,
-.log .control input {
+.log__control .select,
+.log__control .input {
   min-width: 160px;
   height: 2rem;
   padding: 0 var(--space-sm);
   border: 1px solid var(--color-border);
-  border-radius: 4px;
-  font-size: 0.9rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-md);
   background-color: var(--color-surface);
   color: var(--color-text);
 }
 
-/* Dropdown fix */
-.log .control select option {
+.log__control .select option {
   background-color: var(--color-input-bg);
   color: var(--color-text);
 }
 
-/* Buttons */
-.log button {
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  padding: var(--space-sm) var(--space-md);
-  font-size: 0.9rem;
-  transition: background-color 0.2s ease;
-  color: #fff;
-}
-.log button:focus {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+/* Action buttons */
+.log__actions {
+  display: flex;
+  gap: var(--space-sm);
 }
 
-.log .edit-btn { background-color: var(--color-primary); }
-.log .edit-btn:hover { background-color: var(--color-primary-hover); }
-.log .save-btn { background-color: var(--color-secondary); }
-.log .save-btn:hover { background-color: var(--color-secondary-hover); }
-.log .delete-btn { background-color: var(--color-danger); }
-.log .delete-btn:hover { background-color: var(--color-danger-hover); }
+.log__edit-btn {
+  background-color: var(--color-primary);
+}
+.log__edit-btn:hover {
+  background-color: var(--color-primary-hover);
+}
+
+.log__save-btn {
+  background-color: var(--color-secondary);
+}
+.log__save-btn:hover {
+  background-color: var(--color-secondary-hover);
+}
+
+.log__delete-btn {
+  background-color: var(--color-danger);
+}
+.log__delete-btn:hover {
+  background-color: var(--color-danger-hover);
+}
 
 /* Table */
-.log table {
+.log__table {
   width: 100%;
   border-collapse: collapse;
   margin-bottom: var(--space-xs);
-  border-bottom: 1px solid var(--color-border); /* separator under table */
+  border-bottom: 1px solid var(--color-border);
 }
 
-.log th {
+.log__table th {
   text-align: left;
   font-weight: 600;
   color: var(--color-text-strong);
 }
 
-.log th, .log td {
+.log__table th,
+.log__table td {
   padding: var(--space-sm);
   border-bottom: 1px solid var(--color-border);
 }
 
-.log tbody tr:nth-child(odd) { background-color: var(--color-row-light); }
-.log tbody tr:nth-child(even) { background-color: var(--color-row-dark); }
-.log tbody tr:hover { background-color: var(--color-row-hover); transition: background-color 0.2s ease; }
-
-.log .actions { display: flex; gap: var(--space-sm); }
+.log__table tbody tr:nth-child(odd) {
+  background-color: var(--color-row-light);
+}
+.log__table tbody tr:nth-child(even) {
+  background-color: var(--color-row-dark);
+}
+.log__table tbody tr:hover {
+  background-color: var(--color-row-hover);
+  transition: background-color var(--transition-fast);
+}
 
 /* Bulk Import */
-.log .csv-import {
+.log__csv-import {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
 }
 
-/* Bulk Import row layout */
-.log .csv-import .import-row {
+.log__import-row {
   display: flex;
   align-items: center;
   gap: var(--space-md);
 }
 
-.log .csv-import input[type="file"] {
-  flex: 1;
-  min-width: 200px;
-}
-
-.log .csv-import .bulk-actions {
+.log__bulk-actions {
   display: flex;
   gap: var(--space-sm);
 }
 
-.log .csv-import h2 {
-  font-size: 1.2rem;
+.log__csv-title {
+  font-size: var(--font-size-lg);
   font-weight: 600;
   margin-bottom: var(--space-xs);
 }
 
-.log .csv-import p {
+.log__csv-desc {
   margin-bottom: var(--space-xs);
   color: var(--color-text);
 }
 
-.log .csv-import input[type="file"] {
+.log__csv-import input[type="file"] {
   border: 1px solid var(--color-border);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   padding: var(--space-xs);
   background-color: var(--color-input-bg);
   color: var(--color-text);
@@ -533,39 +569,40 @@ function parseCsvRows(rows: string[]): FuelEntryInput[] {
   min-width: unset;
 }
 
-/* Feedback message styles */
-/* Toast-style feedback overlay */
+/* Feedback */
 .feedback {
   position: fixed;
   top: 1rem;
   right: 1rem;
-  z-index: 1000;
+  z-index: var(--z-toast);
   padding: 0.75rem 1rem;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font-weight: 500;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  box-shadow: var(--shadow-sm);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
 }
 
-/* Success and error colors */
-.feedback.success {
+.feedback--success {
   background-color: #e6ffed;
   color: #1a7f37;
-  border: 1px solid #1a7f37;
+  border-color: #1a7f37;
 }
-.feedback.error {
+
+.feedback--error {
   background-color: #ffe6e6;
   color: #a71d2a;
-  border: 1px solid #a71d2a;
+  border-color: #a71d2a;
 }
 
 /* Fade transition */
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.5s ease;
+  transition: opacity var(--transition-slow);
 }
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
 }
-
 </style>

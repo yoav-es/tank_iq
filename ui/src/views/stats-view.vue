@@ -1,21 +1,19 @@
-<!-- ui/src/views/stats-view.vue (refactored) -->
+<!-- ui/src/views/stats-view.vue -->
 <template>
   <div class="report-container">
-    <!-- Header -->
-    <header class="report-header">
-      <h1>Fuel Efficiency Report</h1>
-      <p>{{ headerPeriodLabel }}</p>
+    <header class="report__header">
+      <h1 class="report__title">Fuel Efficiency Report</h1>
+      <p class="report__subtitle">{{ headerPeriodLabel }}</p>
     </header>
 
-    <hr class="report-separator" />
+    <hr class="report__separator" />
 
-    <!-- Controls -->
-    <section class="report-section">
-      <h2>Controls</h2>
-      <div style="display:flex; gap:1rem; align-items:center;">
+    <section class="report__block">
+      <h2 class="report__heading">Controls</h2>
+      <div class="u-flex u-gap-md u-align-start">
         <label>
           <strong>View: </strong>
-          <select v-model="viewMode">
+          <select v-model="viewMode" class="select">
             <option value="yearly">Yearly</option>
             <option value="monthly">Monthly</option>
           </select>
@@ -23,25 +21,24 @@
 
         <label v-if="viewMode === 'yearly'">
           <strong>Period: </strong>
-          <select v-model="selectedPeriod">
+          <select v-model="selectedPeriod" class="select">
             <option v-for="y in yearlyLabels" :key="y" :value="y">{{ y }}</option>
           </select>
         </label>
 
         <label v-else>
-          <strong>Period:</strong>
-          <select v-model="selectedPeriod">
+          <strong>Period: </strong>
+          <select v-model="selectedPeriod" class="select">
             <option v-for="m in monthlyLabels" :key="m" :value="m">{{ m }}</option>
           </select>
         </label>
       </div>
     </section>
 
-    <hr class="report-separator" />
+    <hr class="report__separator" />
 
-    <!-- Executive summary -->
-    <section v-if="summaryBlock" class="report-summary">
-      <h2>Executive Summary</h2>
+    <section v-if="summaryBlock" class="report__block">
+      <h2 class="report__heading">Executive Summary</h2>
       <p>
         {{ summaryBlock.periodText }}
         Vehicles traveled a total of {{ summaryBlock.totalDistance }} km, with an overall efficiency of
@@ -50,34 +47,33 @@
         and costs {{ summaryBlock.costCompare }}.
       </p>
     </section>
-    <hr v-if="summaryBlock" class="report-separator" />
+    <hr v-if="summaryBlock" class="report__separator" />
 
-    <!-- Yearly analysis -->
-    <section v-if="viewMode === 'yearly' && detailedStats" class="report-section">
-      <h2>Yearly Fuel Efficiency Trends</h2>
-      <div class="chart-wrap">
-        <canvas ref="yearlyEfficiencyCanvas"></canvas>
+    <section v-if="viewMode === 'yearly' && detailedStats" class="report__block">
+      <h2 class="report__heading">Yearly Fuel Efficiency Trends</h2>
+      <div class="report__chart">
+        <canvas ref="yearlyEfficiencyCanvas" class="report__chart-canvas"></canvas>
       </div>
     </section>
 
-    <section v-if="viewMode === 'yearly' && detailedStats" class="report-section">
-      <h2>Yearly Fuel Cost Trends</h2>
-      <div class="chart-wrap">
-        <canvas ref="yearlyCostCanvas"></canvas>
+    <section v-if="viewMode === 'yearly' && detailedStats" class="report__block">
+      <h2 class="report__heading">Yearly Fuel Cost Trends</h2>
+      <div class="report__chart">
+        <canvas ref="yearlyCostCanvas" class="report__chart-canvas"></canvas>
       </div>
     </section>
 
-    <section v-if="viewMode === 'yearly' && detailedStats" class="report-section">
-      <h2>Yearly Distance Trends</h2>
-      <div class="chart-wrap">
-        <canvas ref="yearlyDistanceCanvas"></canvas>
+    <section v-if="viewMode === 'yearly' && detailedStats" class="report__block">
+      <h2 class="report__heading">Yearly Distance Trends</h2>
+      <div class="report__chart">
+        <canvas ref="yearlyDistanceCanvas" class="report__chart-canvas"></canvas>
       </div>
     </section>
 
-    <section v-if="viewMode === 'yearly' && selectedYearRow" class="report-section">
-      <h2>Yearly Summary (selected)</h2>
-      <table class="report-table">
-        <thead>
+    <section v-if="viewMode === 'yearly' && selectedYearRow" class="report__block">
+      <h2 class="report__heading">Yearly Summary (selected)</h2>
+      <table class="report__table">
+        <thead class="report__table-head">
           <tr>
             <th>Year</th>
             <th>Efficiency (km/L)</th>
@@ -96,39 +92,37 @@
       </table>
     </section>
 
-    <!-- Insights -->
-    <section v-if="viewMode === 'yearly' && insightsYearlySelected" class="report-section">
-      <h2>Insights</h2>
-      <p class="insight-text">{{ insightsYearlySelected }}</p>
+    <section v-if="viewMode === 'yearly' && insightsYearlySelected" class="report__block">
+      <h2 class="report__heading">Insights</h2>
+      <p class="report__insight">{{ insightsYearlySelected }}</p>
     </section>
-    <hr v-if="viewMode === 'yearly' && insightsYearlySelected" class="report-separator" />
+    <hr v-if="viewMode === 'yearly' && insightsYearlySelected" class="report__separator" />
 
-    <!-- Monthly analysis -->
-    <section v-if="viewMode === 'monthly' && detailedStats" class="report-section">
-      <h2>Monthly Fuel Efficiency Trends</h2>
-      <div class="chart-wrap">
-        <canvas ref="monthlyEfficiencyCanvas"></canvas>
+    <section v-if="viewMode === 'monthly' && detailedStats" class="report__block">
+      <h2 class="report__heading">Monthly Fuel Efficiency Trends</h2>
+      <div class="report__chart">
+        <canvas ref="monthlyEfficiencyCanvas" class="report__chart-canvas"></canvas>
       </div>
     </section>
 
-    <section v-if="viewMode === 'monthly' && detailedStats" class="report-section">
-      <h2>Monthly Fuel Cost Trends</h2>
-      <div class="chart-wrap">
-        <canvas ref="monthlyCostCanvas"></canvas>
+    <section v-if="viewMode === 'monthly' && detailedStats" class="report__block">
+      <h2 class="report__heading">Monthly Fuel Cost Trends</h2>
+      <div class="report__chart">
+        <canvas ref="monthlyCostCanvas" class="report__chart-canvas"></canvas>
       </div>
     </section>
 
-    <section v-if="viewMode === 'monthly' && detailedStats" class="report-section">
-      <h2>Monthly Distance Trends</h2>
-      <div class="chart-wrap">
-        <canvas ref="monthlyDistanceCanvas"></canvas>
+    <section v-if="viewMode === 'monthly' && detailedStats" class="report__block">
+      <h2 class="report__heading">Monthly Distance Trends</h2>
+      <div class="report__chart">
+        <canvas ref="monthlyDistanceCanvas" class="report__chart-canvas"></canvas>
       </div>
     </section>
 
-    <section v-if="viewMode === 'monthly' && selectedMonthRow" class="report-section">
-      <h2>Monthly Summary (selected)</h2>
-      <table class="report-table">
-        <thead>
+    <section v-if="viewMode === 'monthly' && selectedMonthRow" class="report__block">
+      <h2 class="report__heading">Monthly Summary (selected)</h2>
+      <table class="report__table">
+        <thead class="report__table-head">
           <tr>
             <th>Month</th>
             <th>Efficiency (km/L)</th>
@@ -147,22 +141,21 @@
       </table>
     </section>
 
-    <!-- Insights -->
-    <section v-if="viewMode === 'monthly' && insightsMonthlySelected" class="report-section">
-      <h2>Insights</h2>
-      <p class="insight-text">{{ insightsMonthlySelected }}</p>
+    <section v-if="viewMode === 'monthly' && insightsMonthlySelected" class="report__block">
+      <h2 class="report__heading">Insights</h2>
+      <p class="report__insight">{{ insightsMonthlySelected }}</p>
     </section>
-    <hr v-if="viewMode === 'monthly' && insightsMonthlySelected" class="report-separator" />
+    <hr v-if="viewMode === 'monthly' && insightsMonthlySelected" class="report__separator" />
 
-    <!-- Global Fuel Efficiency Distribution -->
-    <section v-if="detailedStats" class="report-section">
-      <h2>Fuel Efficiency Distribution</h2>
-      <div class="chart-wrap">
-        <canvas ref="efficiencyHistogramCanvas"></canvas>
+    <section v-if="detailedStats" class="report__block">
+      <h2 class="report__heading">Fuel Efficiency Distribution</h2>
+      <div class="report__chart">
+        <canvas ref="efficiencyHistogramCanvas" class="report__chart-canvas"></canvas>
       </div>
     </section>
   </div>
 </template>
+
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onUnmounted } from 'vue';
@@ -525,49 +518,59 @@ onUnmounted(() => {
 });
 </script>
 
-
-
 <style scoped>
-/* ===== Report Container ===== */
+/* ==========================================================================
+   Report container
+   ========================================================================== */
+
 .report-container {
   margin: 0 auto;
   width: 100%;
   max-width: none;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-base);
   color: var(--color-text);
 }
 
-/* ===== Header ===== */
-.report-header {
+/* ==========================================================================
+   Header
+   ========================================================================== */
+
+.report__header {
   text-align: center;
   margin-bottom: var(--space-lg);
 }
-.report-header h1 {
-  font-size: 2rem;
+
+.report__title {
+  font-size: var(--font-size-xl);
   font-weight: 700;
   margin: 0;
   color: var(--color-text-strong);
 }
-.report-header p {
+
+.report__subtitle {
   margin: 0;
   color: var(--color-text);
 }
 
-/* ===== Separator ===== */
-.report-separator {
+/* ==========================================================================
+   Separator
+   ========================================================================== */
+
+.report__separator {
   border: none;
   border-top: 2px solid var(--color-border);
   margin: var(--space-lg) 0;
 }
 
-/* ===== Section Blocks ===== */
-.report-section,
-.report-summary,
-.report-insights {
+/* ==========================================================================
+   Section blocks
+   ========================================================================== */
+
+.report__block {
   background: var(--color-card);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   padding: var(--space-md);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   margin-bottom: var(--space-lg);
   width: 100%;
   display: flex;
@@ -575,90 +578,140 @@ onUnmounted(() => {
   align-items: flex-start;
 }
 
-/* ===== Section Headings ===== */
-section > h2,
-.report-summary h2,
-.report-section h2,
-.report-insights h2 {
+/* ==========================================================================
+   Section headings
+   ========================================================================== */
+
+.report__heading {
   font-size: 1.4rem;
   font-weight: 600;
   margin-bottom: var(--space-sm);
   color: var(--color-text-strong);
   border-bottom: 2px solid var(--color-accent);
   padding-bottom: var(--space-xs);
-  padding-left: 0;
 }
 
-/* ===== Lists ===== */
-.report-list {
+/* ==========================================================================
+   Lists
+   ========================================================================== */
+
+.report__list {
   border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   list-style: disc;
   padding-left: var(--space-md);
   margin: 0;
 }
-.report-list li {
+
+.report__list-item {
   margin-bottom: var(--space-xs);
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   color: var(--color-text);
 }
 
-/* ===== Charts ===== */
-.chart-wrap {
+/* ==========================================================================
+   Charts
+   ========================================================================== */
+
+.report__chart {
   width: 100%;
   height: 300px;
   margin: var(--space-lg) 0;
 }
-.chart-wrap canvas {
+
+.report__chart-canvas {
   width: 100% !important;
   height: 100% !important;
   border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: var(--color-input-bg);
   padding: var(--space-xs);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-/* ===== Tables ===== */
-.report-table {
+/* ==========================================================================
+   Tables
+   ========================================================================== */
+
+.report__table {
   width: 100%;
   border-collapse: collapse;
   margin: var(--space-lg) 0;
   border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
 }
-.report-table thead th {
+
+.report__table-head th {
   text-align: left;
   font-weight: 600;
   color: var(--color-text-strong);
   background: var(--color-row-light);
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
-.report-table th,
-.report-table td {
+
+.report__table th,
+.report__table td {
   padding: var(--space-xs);
   border-bottom: 1px solid var(--color-border);
   color: var(--color-text);
 }
-.report-table tbody tr:nth-child(odd) { background-color: var(--color-row-light); }
-.report-table tbody tr:nth-child(even) { background-color: var(--color-row-dark); }
-.report-table tbody tr:hover {
-  background-color: var(--color-row-hover);
-  transition: background-color 0.2s ease;
+
+.report__table tbody tr:nth-child(odd) {
+  background-color: var(--color-row-light);
 }
 
+.report__table tbody tr:nth-child(even) {
+  background-color: var(--color-row-dark);
+}
 
-/* ===== Print Styles ===== */
+.report__table tbody tr:hover {
+  background-color: var(--color-row-hover);
+  transition: background-color var(--transition-fast);
+}
+
+/* ==========================================================================
+   Print styles
+   ========================================================================== */
+
 @media print {
-  .report-container { max-width: none; margin: 0; padding: 0; color: #000; }
-  .report-header { text-align: center; margin-bottom: 12pt; }
-  .chart-wrap { height: 240px; margin: 12pt 0; }
-  .chart-wrap canvas { border: 1pt solid #000; box-shadow: none; }
-  .report-table { border: 1pt solid #000; margin: 12pt 0; }
-  .report-table thead th, .report-table td { border-bottom: 1pt solid #000; }
-  .report-section, .report-summary ul, .report-insights ul { page-break-inside: avoid; }
+  .report-container {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    color: #000;
+  }
+
+  .report__header {
+    text-align: center;
+    margin-bottom: 12pt;
+  }
+
+  .report__chart {
+    height: 240px;
+    margin: 12pt 0;
+  }
+
+  .report__chart-canvas {
+    border: 1pt solid #000;
+    box-shadow: none;
+  }
+
+  .report__table {
+    border: 1pt solid #000;
+    margin: 12pt 0;
+  }
+
+  .report__table th,
+  .report__table td {
+    border-bottom: 1pt solid #000;
+  }
+
+  .report__block,
+  .report__list {
+    page-break-inside: avoid;
+  }
 }
 </style>
