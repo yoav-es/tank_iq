@@ -1,13 +1,11 @@
 <!-- ui/src/views/stats-view.vue -->
 <template>
+   <section class="stats">
+    <h1 class="view__headline">📊Stats</h1>
+  </section>
   <div class="report-container">
-    <header class="report__header">
-      <h1 class="report__title">Fuel Efficiency Report</h1>
-      <p class="report__subtitle">{{ headerPeriodLabel }}</p>
-    </header>
 
-    <hr class="report__separator" />
-
+    <!-- Controls -->
     <section class="report__block">
       <h2 class="report__heading">Controls</h2>
       <div class="u-flex u-gap-md u-align-start">
@@ -35,8 +33,9 @@
       </div>
     </section>
 
-    <hr class="report__separator" />
+    <hr class="field__separator" />
 
+    <!-- Executive Summary -->
     <section v-if="summaryBlock" class="report__block">
       <h2 class="report__heading">Executive Summary</h2>
       <p>
@@ -47,22 +46,21 @@
         and costs {{ summaryBlock.costCompare }}.
       </p>
     </section>
-    <hr v-if="summaryBlock" class="report__separator" />
+    <hr v-if="summaryBlock" class="field__separator" />
 
+    <!-- Yearly charts -->
     <section v-if="viewMode === 'yearly' && detailedStats" class="report__block">
       <h2 class="report__heading">Yearly Fuel Efficiency Trends</h2>
       <div class="report__chart">
         <canvas ref="yearlyEfficiencyCanvas" class="report__chart-canvas"></canvas>
       </div>
     </section>
-
     <section v-if="viewMode === 'yearly' && detailedStats" class="report__block">
       <h2 class="report__heading">Yearly Fuel Cost Trends</h2>
       <div class="report__chart">
         <canvas ref="yearlyCostCanvas" class="report__chart-canvas"></canvas>
       </div>
     </section>
-
     <section v-if="viewMode === 'yearly' && detailedStats" class="report__block">
       <h2 class="report__heading">Yearly Distance Trends</h2>
       <div class="report__chart">
@@ -70,48 +68,26 @@
       </div>
     </section>
 
-    <section v-if="viewMode === 'yearly' && selectedYearRow" class="report__block">
-      <h2 class="report__heading">Yearly Summary (selected)</h2>
-      <table class="report__table">
-        <thead class="report__table-head">
-          <tr>
-            <th>Year</th>
-            <th>Efficiency (km/L)</th>
-            <th>Distance (km)</th>
-            <th>Total Cost</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>{{ selectedYearRow.period_label }}</td>
-            <td>{{ selectedYearRow.average_km_per_liter }}</td>
-            <td>{{ selectedYearRow.total_distance }}</td>
-            <td>{{ currency(selectedYearRow.total_cost) }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
+    <!-- Insights -->
     <section v-if="viewMode === 'yearly' && insightsYearlySelected" class="report__block">
       <h2 class="report__heading">Insights</h2>
-      <p class="report__insight">{{ insightsYearlySelected }}</p>
+      <p class="report__insight">{{ insightsYearlySelected.efficiency }}</p>
+      <p class="report__insight">{{ insightsYearlySelected.distance }}</p>
     </section>
-    <hr v-if="viewMode === 'yearly' && insightsYearlySelected" class="report__separator" />
 
+    <!-- Monthly charts -->
     <section v-if="viewMode === 'monthly' && detailedStats" class="report__block">
       <h2 class="report__heading">Monthly Fuel Efficiency Trends</h2>
       <div class="report__chart">
         <canvas ref="monthlyEfficiencyCanvas" class="report__chart-canvas"></canvas>
       </div>
     </section>
-
     <section v-if="viewMode === 'monthly' && detailedStats" class="report__block">
       <h2 class="report__heading">Monthly Fuel Cost Trends</h2>
       <div class="report__chart">
         <canvas ref="monthlyCostCanvas" class="report__chart-canvas"></canvas>
       </div>
     </section>
-
     <section v-if="viewMode === 'monthly' && detailedStats" class="report__block">
       <h2 class="report__heading">Monthly Distance Trends</h2>
       <div class="report__chart">
@@ -119,34 +95,14 @@
       </div>
     </section>
 
-    <section v-if="viewMode === 'monthly' && selectedMonthRow" class="report__block">
-      <h2 class="report__heading">Monthly Summary (selected)</h2>
-      <table class="report__table">
-        <thead class="report__table-head">
-          <tr>
-            <th>Month</th>
-            <th>Efficiency (km/L)</th>
-            <th>Fuel Cost</th>
-            <th>Price/L</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>{{ selectedMonthRow.period_label }}</td>
-            <td>{{ selectedMonthRow.average_km_per_liter }}</td>
-            <td>{{ currency(selectedMonthRow.total_cost) }}</td>
-            <td>{{ currency(selectedMonthRow.average_cost_per_liter) }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
+    <!-- Insights -->
     <section v-if="viewMode === 'monthly' && insightsMonthlySelected" class="report__block">
       <h2 class="report__heading">Insights</h2>
-      <p class="report__insight">{{ insightsMonthlySelected }}</p>
+      <p class="report__insight">{{ insightsMonthlySelected.efficiency }}</p>
+      <p class="report__insight">{{ insightsMonthlySelected.distance }}</p>
     </section>
-    <hr v-if="viewMode === 'monthly' && insightsMonthlySelected" class="report__separator" />
 
+    <!-- Histogram -->
     <section v-if="detailedStats" class="report__block">
       <h2 class="report__heading">Fuel Efficiency Distribution</h2>
       <div class="report__chart">
@@ -158,365 +114,255 @@
 
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, onUpdated, nextTick } from 'vue';
 import { useFuelStore } from '../stores/fuel-store';
 import type { DetailedStats } from '../types/fuel-entry';
+
 import {
-  Chart as ChartJS,
-  ChartOptions,
-  ChartType,
-  registerables
-} from 'chart.js';
+  chartOptionsWithUnit,
+  buildDataset,
+  initOrUpdateChart,
+  resetCharts,
+  buildGlobalEfficiencyHistogram
+} from '../composables/useChart';
 
-ChartJS.register(...registerables);
+import {
+  useSummaryBlock,
+  efficiencyInsight,
+  distanceInsight,
+  usePeriodLabels,
+  computeHeaderPeriodLabel
+} from '../composables/useStats';
 
-// Store
+// store and state
 const store = useFuelStore();
 const detailedStats = computed<DetailedStats | null>(() => store.detailedStats ?? null);
 
-// View/Period controls
 const viewMode = ref<'yearly' | 'monthly'>('yearly');
-const selectedPeriod = ref<string>('');
-
-// Currency
+const selectedPeriod = ref<string | null>(null);
 const currencyCode = ref('ILS');
-const currency = (n: number): string =>
-  Intl.NumberFormat(undefined, { style: 'currency', currency: currencyCode.value }).format(n);
 
-// Labels
-const yearlyLabels = computed(() => detailedStats.value?.yearly_stats.map(y => y.period_label).reverse() ?? []);
-const monthlyLabels = computed(() => detailedStats.value?.monthly_stats.map(m => m.period_label).reverse() ?? []);
+// labels + header
+const { yearlyLabels, monthlyLabels } = usePeriodLabels(detailedStats);
+const headerPeriodLabel = computed(() => computeHeaderPeriodLabel(detailedStats));
 
-// Summary block
-const summaryBlock = computed(() => {
-  const ds = detailedStats.value;
-  if (!ds) return null;
-
-  if (viewMode.value === 'yearly' && selectedYearRow.value) {
-    const row = selectedYearRow.value;
-    const avgAllYears =
-      ds.yearly_stats.reduce((s, y) => s + y.average_km_per_liter, 0) / ds.yearly_stats.length;
-    const avgAllCost =
-      ds.yearly_stats.reduce((s, y) => s + y.total_cost, 0) / ds.yearly_stats.length;
-
-    return {
-      periodText: `This report summarizes fuel efficiency and costs for ${row.period_label}.`,
-      totalDistance: row.total_distance.toFixed(0),
-      averageEfficiency: row.average_km_per_liter.toFixed(2),
-      totalCost: currency(row.total_cost),
-      efficiencyCompare: row.average_km_per_liter >= avgAllYears ? 'higher' : 'lower',
-      costCompare: row.total_cost >= avgAllCost ? 'rose' : 'fell'
-    };
-  }
-
-  if (viewMode.value === 'monthly' && selectedMonthRow.value) {
-    const row = selectedMonthRow.value;
-    const yearKey = row.period_label.slice(0, 4);
-    const monthsSameYear = ds.monthly_stats.filter(m => m.period_label.startsWith(yearKey));
-    const avgYearEff =
-      monthsSameYear.length
-        ? monthsSameYear.reduce((s, m) => s + m.average_km_per_liter, 0) / monthsSameYear.length
-        : row.average_km_per_liter;
-    const avgYearCost =
-      monthsSameYear.length
-        ? monthsSameYear.reduce((s, m) => s + m.total_cost, 0) / monthsSameYear.length
-        : row.total_cost;
-
-    return {
-      periodText: `This report summarizes fuel efficiency and costs for ${row.period_label}.`,
-      totalDistance: row.total_distance?.toFixed?.(0) ?? '0',
-      averageEfficiency: row.average_km_per_liter.toFixed(2),
-      totalCost: currency(row.total_cost),
-      efficiencyCompare: row.average_km_per_liter >= avgYearEff ? 'higher' : 'lower',
-      costCompare: row.total_cost >= avgYearCost ? 'rose' : 'fell'
-    };
-  }
-
-  return null;
-});
-
-// Default latest period
-watch([detailedStats, viewMode], () => {
-  const ds = detailedStats.value;
-  if (!ds) return;
-  if (viewMode.value === 'yearly') {
-    const labels = yearlyLabels.value;
-    if (labels.length) selectedPeriod.value = labels[labels.length - 1];
-  } else {
-    const labels = monthlyLabels.value;
-    if (labels.length) selectedPeriod.value = labels[labels.length - 1];
-  }
-}, { immediate: true });
-
-// Selected rows
+// selected rows
 const selectedYearRow = computed(() =>
-  viewMode.value === 'yearly'
-    ? detailedStats.value?.yearly_stats.find(y => y.period_label === selectedPeriod.value) ?? null
-    : null
+  detailedStats.value?.yearly_stats.find(y => y.period_label === selectedPeriod.value) ?? null
 );
 const selectedMonthRow = computed(() =>
-  viewMode.value === 'monthly'
-    ? detailedStats.value?.monthly_stats.find(m => m.period_label === selectedPeriod.value) ?? null
-    : null
+  detailedStats.value?.monthly_stats.find(m => m.period_label === selectedPeriod.value) ?? null
 );
 
-// Header
-const headerPeriodLabel = computed(() => {
-  const ds = detailedStats.value;
-  if (!ds) return 'Period: —';
-  const firstYear = ds.yearly_stats[0]?.period_label ?? '—';
-  const lastYear = ds.yearly_stats[ds.yearly_stats.length - 1]?.period_label ?? '—';
-  return `Period: ${firstYear} – ${lastYear}`;
-});
+// summary block
+const { summaryBlock } = useSummaryBlock(viewMode, selectedYearRow, selectedMonthRow, currencyCode);
 
-// Insight helpers
-function efficiencyInsight(value: number, avg: number) {
-  if (value > avg * 1.1) return "fuel consumption was higher than usual";
-  if (value < avg * 0.9) return "fuel consumption was lower than usual";
-  return "fuel consumption was close to average";
-}
-function distanceInsight(distance: number, avg: number) {
-  if (distance > avg * 1.1) return "you drove a lot more than usual";
-  if (distance < avg * 0.9) return "you drove less than you normally do";
-  return "your driving distance was typical";
-}
-
-// Yearly insights
-const insightsYearlySelected = computed<string>(() => {
-  const ds = detailedStats.value;
+// insights
+const insightsYearlySelected = computed(() => {
   const row = selectedYearRow.value;
-  if (!ds || !row) return "";
+  const ds = detailedStats.value;
+  if (!row || !ds) return null;
   const avgEff = ds.yearly_stats.reduce((s, y) => s + y.average_km_per_liter, 0) / ds.yearly_stats.length;
   const avgDist = ds.yearly_stats.reduce((s, y) => s + y.total_distance, 0) / ds.yearly_stats.length;
-  return `During ${row.period_label}, ${efficiencyInsight(row.average_km_per_liter, avgEff)} and ${distanceInsight(row.total_distance, avgDist)}, making this period stand out compared to your usual driving.`;
+  return {
+    efficiency: efficiencyInsight(row.average_km_per_liter, avgEff),
+    distance: distanceInsight(row.total_distance, avgDist)
+  };
 });
-
-// Monthly insights
-const insightsMonthlySelected = computed<string>(() => {
-  const ds = detailedStats.value;
+const insightsMonthlySelected = computed(() => {
   const row = selectedMonthRow.value;
-  if (!ds || !row) return "";
-  const avgEff = ds.monthly_stats.reduce((s, m) => s + m.average_km_per_liter, 0) / ds.monthly_stats.length;
-  const avgDist = ds.monthly_stats.reduce((s, m) => s + m.total_distance, 0) / ds.monthly_stats.length;
-  return `In ${row.period_label}, ${efficiencyInsight(row.average_km_per_liter, avgEff)} and ${distanceInsight(row.total_distance, avgDist)}, giving the month its own driving profile.`;
+  const ds = detailedStats.value;
+  if (!row || !ds) return null;
+  const yearKey = row.period_label.slice(0, 4);
+  const monthsSameYear = ds.monthly_stats.filter(m => m.period_label.startsWith(yearKey));
+  const avgEff = monthsSameYear.reduce((s, m) => s + m.average_km_per_liter, 0) / monthsSameYear.length;
+  const avgDist = monthsSameYear.reduce((s, m) => s + m.total_distance, 0) / monthsSameYear.length;
+  return {
+    efficiency: efficiencyInsight(row.average_km_per_liter, avgEff),
+    distance: distanceInsight(row.total_distance, avgDist)
+  };
 });
 
-// Chart refs
+// chart refs
 const yearlyEfficiencyCanvas = ref<HTMLCanvasElement | null>(null);
 const yearlyCostCanvas = ref<HTMLCanvasElement | null>(null);
+const yearlyDistanceCanvas = ref<HTMLCanvasElement | null>(null);
 const monthlyEfficiencyCanvas = ref<HTMLCanvasElement | null>(null);
 const monthlyCostCanvas = ref<HTMLCanvasElement | null>(null);
-const yearlyDistanceCanvas = ref<HTMLCanvasElement | null>(null);
 const monthlyDistanceCanvas = ref<HTMLCanvasElement | null>(null);
-
-// ADD: histogram ref
 const efficiencyHistogramCanvas = ref<HTMLCanvasElement | null>(null);
 
-// Chart instances
-let yearlyEfficiencyChart: ChartJS | null = null;
-let yearlyCostChart: ChartJS | null = null;
-let monthlyEfficiencyChart: ChartJS | null = null;
-let monthlyCostChart: ChartJS | null = null;
-let yearlyDistanceChart: ChartJS | null = null;
-let monthlyDistanceChart: ChartJS | null = null;
+// chart instances
+let yearlyEfficiencyChart: any = null;
+let yearlyCostChart: any = null;
+let yearlyDistanceChart: any = null;
+let monthlyEfficiencyChart: any = null;
+let monthlyCostChart: any = null;
+let monthlyDistanceChart: any = null;
+let histogramChart: any = null;
 
-// ADD: histogram chart instance
-let efficiencyHistogramChart: ChartJS | null = null;
-
-// Chart options
-function chartOptionsWithUnit(yLabel: string, title: string): ChartOptions {
-  return {
-    responsive: true,
-    animation: false,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      title: { display: true, text: title, color: 'var(--color-text)', font: { size: 16 } }
-    },
-    scales: {
-      x: { title: { display: true, text: 'Period', color: 'var(--color-text)' } },
-      y: { title: { display: true, text: yLabel, color: 'var(--color-text)' } }
-    }
-  };
-}
-function arraysChanged(a: unknown[], b: unknown[]) {
-  if (a.length !== b.length) return true;
-  return a.some((val, i) => val !== b[i]);
-}
-function buildDataset(type: 'bar' | 'line', data: number[], color: string) {
-  return type === 'bar'
-    ? { data, backgroundColor: color }
-    : { data, borderColor: color, tension: 0.3, fill: false };
-}
-function initOrUpdateChart(
-  chart: ChartJS | null,
-  canvas: HTMLCanvasElement | null,
-  type: ChartType,
-  labels: string[],
-  data: number[],
-  dataset: any,
-  options: ChartOptions
-): ChartJS | null {
-  if (!chart && canvas) {
-    return new ChartJS(canvas, { type, data: { labels, datasets: [dataset] }, options });
-  } else if (chart) {
-    const needUpdate =
-      arraysChanged(chart.data.labels as string[], labels) ||
-      arraysChanged(chart.data.datasets[0].data as number[], data);
-    if (needUpdate) {
-      chart.data.labels = labels;
-      chart.data.datasets[0].data = data;
-      chart.options = options;
-      chart.update();
-    }
+// ensure latest period is selected
+const selectLatestPeriod = () => {
+  if (viewMode.value === 'yearly' && yearlyLabels.value.length > 0) {
+    selectedPeriod.value = yearlyLabels.value[yearlyLabels.value.length - 1];
+  } else if (viewMode.value === 'monthly' && monthlyLabels.value.length > 0) {
+    selectedPeriod.value = monthlyLabels.value[monthlyLabels.value.length - 1];
   }
-  return chart;
-}
+};
 
-// Reset helper
-function resetCharts() {
-  yearlyEfficiencyChart?.destroy();
-  yearlyCostChart?.destroy();
-  yearlyDistanceChart?.destroy();
-  monthlyEfficiencyChart?.destroy();
-  monthlyCostChart?.destroy();
-  monthlyDistanceChart?.destroy();
+// --- FIXED draw functions ---
+function drawYearly(ds: DetailedStats) {
+  if (!selectedYearRow.value) return;
+  const yearKey = selectedYearRow.value.period_label;
+  const monthsForYear = ds.monthly_stats.filter(m => m.period_label.startsWith(yearKey)).reverse();
 
-  yearlyEfficiencyChart = null;
-  yearlyCostChart = null;
-  yearlyDistanceChart = null;
-  monthlyEfficiencyChart = null;
-  monthlyCostChart = null;
-  monthlyDistanceChart = null;
-}
+  const labels = monthsForYear.map(m => m.period_label);
+  const effData = monthsForYear.map(m => m.average_km_per_liter);
+  const costData = monthsForYear.map(m => m.total_cost);
+  const distData = monthsForYear.map(m => m.total_distance);
 
-// Watcher for charts
-watch([detailedStats, viewMode, selectedPeriod], async ([ds]) => {
-  if (!ds || !selectedPeriod.value) return;
-  await nextTick();
-
-  // reset before re‑init
-  resetCharts();
-
-  if (viewMode.value === 'yearly' && selectedYearRow.value) {
-    const yearKey = selectedYearRow.value.period_label;
-    const monthsForYear = ds.monthly_stats.filter(m => m.period_label.startsWith(yearKey)).reverse();
-
-    const labels = monthsForYear.map(m => m.period_label);
-    const effData = monthsForYear.map(m => m.average_km_per_liter);
-    const costData = monthsForYear.map(m => m.total_cost);
-    const distData = monthsForYear.map(m => m.total_distance);
-
-    yearlyEfficiencyChart = initOrUpdateChart(
-      yearlyEfficiencyChart, yearlyEfficiencyCanvas.value, 'line',
-      labels, effData,
-      buildDataset('line', effData, '#2196F3'),
-      chartOptionsWithUnit('km/L', `Fuel Efficiency in ${yearKey}`)
-    );
-
-    yearlyCostChart = initOrUpdateChart(
-      yearlyCostChart, yearlyCostCanvas.value, 'line',
-      labels, costData,
-      buildDataset('line', costData, '#FF9800'),
-      chartOptionsWithUnit(currencyCode.value, `Fuel Cost in ${yearKey}`)
-    );
-
-    yearlyDistanceChart = initOrUpdateChart(
-      yearlyDistanceChart, yearlyDistanceCanvas.value, 'line',
-      labels, distData,
-      buildDataset('line', distData, '#9C27B0'),
-      chartOptionsWithUnit('km', `Distance Travelled in ${yearKey}`)
-    );
-  }
-
-  if (viewMode.value === 'monthly' && selectedMonthRow.value) {
-    const monthKey = selectedMonthRow.value.period_label;
-    const entriesForMonth = store.entries.filter(e =>
-      e.date?.startsWith(monthKey)
-    ).reverse();
-
-    const labels = entriesForMonth.map(e => e.date!);
-    const effData = entriesForMonth.map(e => e.km_per_liter);
-    const costData = entriesForMonth.map(e => e.total_cost);
-    const distData = entriesForMonth.map(e => e.distance);
-
-    monthlyEfficiencyChart = initOrUpdateChart(
-      monthlyEfficiencyChart, monthlyEfficiencyCanvas.value, 'bar',
-      labels, effData,
-      buildDataset('bar', effData, '#4CAF50'),
-      chartOptionsWithUnit('km/L', `Fuel Efficiency for ${monthKey}`)
-    );
-
-    monthlyCostChart = initOrUpdateChart(
-      monthlyCostChart, monthlyCostCanvas.value, 'bar',
-      labels, costData,
-      buildDataset('bar', costData, '#FF9800'),
-      chartOptionsWithUnit(currencyCode.value, `Fuel Cost for ${monthKey}`)
-    );
-
-    monthlyDistanceChart = initOrUpdateChart(
-      monthlyDistanceChart, monthlyDistanceCanvas.value, 'bar',
-      labels, distData,
-      buildDataset('bar', distData, '#9C27B0'),
-      chartOptionsWithUnit('km', `Distance Travelled in ${monthKey}`)
-    );
-  }
-}, { immediate: true });
-
-// --- Histogram logic ---
-function computeEfficiencyHistogramBins(): { labels: string[]; counts: number[] } {
-  const entries = store.entries;
-  if (!entries?.length) return { labels: [], counts: [] };
-
-  const efficiencies = entries
-    .filter(e => e.distance && e.liters)
-    .map(e => e.distance / e.liters);
-
-  if (!efficiencies.length) return { labels: [], counts: [] };
-
-  const minEff = Math.floor(Math.min(...efficiencies) / 2) * 2;
-  const maxEff = Math.ceil(Math.max(...efficiencies) / 2) * 2;
-
-  const labels: string[] = [];
-  const counts: number[] = [];
-
-  for (let b = minEff; b < maxEff; b += 2) {
-    labels.push(`${b}–${b + 2} km/L`);
-    counts.push(efficiencies.filter(v => v >= b && v < b + 2).length);
-  }
-
-  return { labels, counts };
-}
-
-function buildGlobalEfficiencyHistogram() {
-  const { labels, counts } = computeEfficiencyHistogramBins();
-  if (!efficiencyHistogramCanvas.value) return;
-
-  efficiencyHistogramChart = initOrUpdateChart(
-    efficiencyHistogramChart,
-    efficiencyHistogramCanvas.value,
-    'bar',
+  yearlyEfficiencyChart = initOrUpdateChart(
+    yearlyEfficiencyChart,
+    yearlyEfficiencyCanvas.value,
+    'line',
     labels,
-    counts,
-    { data: counts, backgroundColor: '#607D8B' },
-    chartOptionsWithUnit('Count', 'Fuel Efficiency Distribution')
+    effData,
+    buildDataset('line', effData, '#4CAF50'),
+    chartOptionsWithUnit('km/L', `Fuel Efficiency in ${yearKey}`)
+  );
+
+  yearlyCostChart = initOrUpdateChart(
+    yearlyCostChart,
+    yearlyCostCanvas.value,
+    'line',
+    labels,
+    costData,
+    buildDataset('line', costData, '#2196F3'),
+    chartOptionsWithUnit('Cost', `Fuel Cost in ${yearKey}`)
+  );
+
+  yearlyDistanceChart = initOrUpdateChart(
+    yearlyDistanceChart,
+    yearlyDistanceCanvas.value,
+    'line',
+    labels,
+    distData,
+    buildDataset('line', distData, '#FFC107'),
+    chartOptionsWithUnit('Distance', `Distance Driven in ${yearKey}`)
   );
 }
 
-// Watcher for histogram
-watch([detailedStats, () => store.entries], async () => {
+function drawMonthly(ds: DetailedStats) {
+  if (!selectedMonthRow.value) return;
+  const monthKey = selectedMonthRow.value.period_label;
+  const entriesForMonth = store.entries.filter(e => e.date?.startsWith(monthKey)).reverse();
+
+  const labels = entriesForMonth.map(e => e.date!);
+  const effData = entriesForMonth.map(e => e.km_per_liter);
+  const costData = entriesForMonth.map(e => e.total_cost);
+  const distData = entriesForMonth.map(e => e.distance);
+
+  monthlyEfficiencyChart = initOrUpdateChart(
+    monthlyEfficiencyChart,
+    monthlyEfficiencyCanvas.value,
+    'bar',
+    labels,
+    effData,
+    buildDataset('bar', effData, '#4CAF50'),
+    chartOptionsWithUnit('km/L', `Fuel Efficiency for ${monthKey}`)
+  );
+
+  monthlyCostChart = initOrUpdateChart(
+    monthlyCostChart,
+    monthlyCostCanvas.value,
+    'bar',
+    labels,
+    costData,
+    buildDataset('bar', costData, '#2196F3'),
+    chartOptionsWithUnit('Cost', `Fuel Cost for ${monthKey}`)
+  );
+
+  monthlyDistanceChart = initOrUpdateChart(
+    monthlyDistanceChart,
+    monthlyDistanceCanvas.value,
+    'bar',
+    labels,
+    distData,
+    buildDataset('bar', distData, '#FFC107'),
+    chartOptionsWithUnit('Distance', `Distance Driven in ${monthKey}`)
+  );
+}
+
+function drawHistogram() {
+  if (efficiencyHistogramCanvas.value && store.entries?.length) {
+    histogramChart = buildGlobalEfficiencyHistogram(
+      histogramChart,
+      efficiencyHistogramCanvas.value,
+      store.entries
+    );
+  }
+}
+
+// lifecycle
+onMounted(async () => {
+  selectLatestPeriod();
+  await nextTick(); // ensure canvases exist
+  if (detailedStats.value) {
+    if (viewMode.value === 'yearly') drawYearly(detailedStats.value);
+    else drawMonthly(detailedStats.value);
+  }
+  drawHistogram();
+});
+
+// redraw when stats or viewMode change, after DOM updates
+watch([detailedStats, viewMode], async ([ds]) => {
+  if (!ds) return;
   await nextTick();
-  buildGlobalEfficiencyHistogram();
+  if (viewMode.value === 'yearly') drawYearly(ds);
+  else drawMonthly(ds);
 }, { immediate: true });
 
-// Cleanup on unmount
-onUnmounted(() => {
-  resetCharts();
-  efficiencyHistogramChart?.destroy();
-  efficiencyHistogramChart = null;
+// keep selectedPeriod in sync with labels and mode
+watch([viewMode, yearlyLabels, monthlyLabels], () => {
+  selectLatestPeriod();
+}, { immediate: true });
 
+// histogram: update when entries change and after DOM updates
+watch(
+  () => store.entries,
+  async entries => {
+    await nextTick();
+    drawHistogram();
+  },
+  { deep: true, immediate: true }
+);
+
+// also re-draw after any template update (e.g., toggling yearly/monthly swaps canvases)
+onUpdated(async () => {
+  await nextTick();
+  if (detailedStats.value) {
+    if (viewMode.value === 'yearly') drawYearly(detailedStats.value);
+    else drawMonthly(detailedStats.value);
+  }
+  drawHistogram();
+});
+
+// optional cleanup on unmount
+onUnmounted(() => {
+  resetCharts([
+    yearlyEfficiencyChart,
+    yearlyCostChart,
+    yearlyDistanceChart,
+    monthlyEfficiencyChart,
+    monthlyCostChart,
+    monthlyDistanceChart,
+    histogramChart
+  ]);
 });
 </script>
+
+
+
 
 <style scoped>
 /* ==========================================================================
@@ -531,36 +377,7 @@ onUnmounted(() => {
   color: var(--color-text);
 }
 
-/* ==========================================================================
-   Header
-   ========================================================================== */
 
-.report__header {
-  text-align: center;
-  margin-bottom: var(--space-lg);
-}
-
-.report__title {
-  font-size: var(--font-size-xl);
-  font-weight: 700;
-  margin: 0;
-  color: var(--color-text-strong);
-}
-
-.report__subtitle {
-  margin: 0;
-  color: var(--color-text);
-}
-
-/* ==========================================================================
-   Separator
-   ========================================================================== */
-
-.report__separator {
-  border: none;
-  border-top: 2px solid var(--color-border);
-  margin: var(--space-lg) 0;
-}
 
 /* ==========================================================================
    Section blocks
@@ -571,6 +388,7 @@ onUnmounted(() => {
   border-radius: var(--radius-lg);
   padding: var(--space-md);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  margin-top: var(--space-lg);
   margin-bottom: var(--space-lg);
   width: 100%;
   display: flex;
@@ -620,8 +438,8 @@ onUnmounted(() => {
 }
 
 .report__chart-canvas {
-  width: 100% !important;
-  height: 100% !important;
+  width: 100%;
+  height: 300px; /* fixed height */
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-input-bg);
@@ -682,11 +500,6 @@ onUnmounted(() => {
     margin: 0;
     padding: 0;
     color: #000;
-  }
-
-  .report__header {
-    text-align: center;
-    margin-bottom: 12pt;
   }
 
   .report__chart {

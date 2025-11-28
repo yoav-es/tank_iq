@@ -7,46 +7,22 @@
         <h2 class="sidebar__title">{{ appTitle }}</h2>
         <nav>
           <ul class="sidebar__list">
-            <li class="sidebar__item">
+            <li
+              v-for="item in navItems"
+              :key="item.to"
+              class="sidebar__item"
+            >
               <router-link
-                to="/dashboard"
+                :to="item.to"
                 class="sidebar__link"
                 active-class="sidebar__link--active"
               >
                 <n-icon size="18">
                   <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8v-10h-8v10zm0-18v6h8V3h-8z" />
+                    <path :d="item.iconPath" />
                   </svg>
                 </n-icon>
-                <span>Dashboard</span>
-              </router-link>
-            </li>
-            <li class="sidebar__item">
-              <router-link
-                to="/stats"
-                class="sidebar__link"
-                active-class="sidebar__link--active"
-              >
-                <n-icon size="18">
-                  <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M3 17h2v-7H3v7zm4 0h2V7H7v10zm4 0h2v-4h-2v4zm4 0h2V4h-2v13zm4 0h2v-9h-2v9z" />
-                  </svg>
-                </n-icon>
-                <span>Statistics</span>
-              </router-link>
-            </li>
-            <li class="sidebar__item">
-              <router-link
-                to="/log"
-                class="sidebar__link"
-                active-class="sidebar__link--active"
-              >
-                <n-icon size="18">
-                  <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M3 5v14h18V5H3zm16 12H5V7h14v10z" />
-                  </svg>
-                </n-icon>
-                <span>Log</span>
+                <span>{{ item.label }}</span>
               </router-link>
             </li>
           </ul>
@@ -64,26 +40,45 @@
 
     <!-- Footer -->
     <footer class="footer">
+      <span class="footer__brand">TankIQ by Yoav‑ES || Version 1.0.0 || </span>
       <button class="footer__button" @click="toggleDarkMode">
-        Dark Mode
+        {{ isDark ? 'Light Mode' : 'Dark Mode' }}
       </button>
     </footer>
   </div>
 </template>
 
-
 <script setup lang="ts">
+import { ref } from 'vue';
 import { useLayoutStore } from './stores/layout-store';
 
-const appTitle: string = 'TankIQ';
+const appTitle = 'TankIQ';
 const layoutStore = useLayoutStore();
+const isDark = ref(false);
 
-function exportCsv(): void {
-  alert('Export CSV triggered');
-}
+// Sidebar navigation items
+const navItems = [
+  {
+    to: '/dashboard',
+    label: 'Dashboard',
+    iconPath: 'M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8v-10h-8v10zm0-18v6h8V3h-8z'
+  },
+  {
+    to: '/stats',
+    label: 'Statistics',
+    iconPath: 'M3 17h2v-7H3v7zm4 0h2V7H7v10zm4 0h2v-4h-2v4zm4 0h2V4h-2v13zm4 0h2v-9h-2v9z'
+  },
+  {
+    to: '/log',
+    label: 'Log',
+    iconPath: 'M3 5v14h18V5H3zm16 12H5V7h14v10z'
+  }
+];
 
 function toggleDarkMode(): void {
-  alert('Dark mode toggle clicked (not implemented yet)');
+  isDark.value = !isDark.value;
+  layoutStore.toggleDarkMode?.(); // call store action if implemented
+  document.documentElement.classList.toggle('dark', isDark.value);
 }
 </script>
 
@@ -91,12 +86,16 @@ function toggleDarkMode(): void {
 /* ==========================================================================
    App layout (scoped to App.vue)
    ========================================================================== */
-
+#app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
 .app-layout {
   flex: 1;
   display: grid;
   grid-template-columns: clamp(100px, 12vw, 160px) 1fr;
-  min-height: 0; /* allow content to scroll */
+  min-height: 0;
 }
 
 /* Sidebar */
@@ -140,7 +139,7 @@ function toggleDarkMode(): void {
 
 .sidebar__link--active {
   background-color: var(--color-secondary);
-  color: var(--color-surface-strong, #111827); /* fallback */
+  color: var(--color-surface-strong, #111827);
   font-weight: 600;
 }
 
@@ -151,6 +150,7 @@ function toggleDarkMode(): void {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  padding-bottom: 48px;
 }
 
 .content--no-scroll {
@@ -159,29 +159,47 @@ function toggleDarkMode(): void {
 
 /* Footer */
 .footer {
-  flex-shrink: 0;
-  display: flex;
-  justify-content: center;
-  gap: var(--space-md);
-  padding: var(--space-xs) var(--space-sm);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
   background: var(--color-footer-bg);
-  font-size: var(--font-size-xs);
-  box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.3);
+  color: var(--color-text);
+  border-top: 1px solid var(--color-border);
+
+  display: flex;
+  justify-content: center; /* center everything together */
+  gap: var(--space-md);    
+  align-items: center;              /* vertical centering */
+  padding: 0 var(--space-md);       /* horizontal breathing room */
+  height: 36px;                     /* slightly taller for comfort */
+  font-size: var(--font-size-sm);
+  box-shadow: 0 -2px 4px rgba(0,0,0,0.05); /* subtle shadow for depth */
+}
+
+.footer__brand {
+  font-weight: 500;
+  color: var(--color-text);
+  opacity: 0.8;                     /* softer look */
 }
 
 .footer__button {
-  background: transparent;
-  border: none;
-  color: var(--color-text);
-  cursor: pointer;
-  transition: color var(--transition-fast);
+  background-color: var(--color-secondary);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  padding: var(--space-xs) var(--space-md);
   font-size: var(--font-size-sm);
-  padding: var(--space-xs) var(--space-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--transition-fast),
+              transform var(--transition-fast);
 }
 
 .footer__button:hover {
-  color: var(--color-secondary);
+  background-color: var(--color-secondary-hover);
+  transform: translateY(-1px);      /* subtle lift on hover */
 }
+
 
 /* Responsive */
 @media (max-width: 768px) {

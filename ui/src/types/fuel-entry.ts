@@ -64,3 +64,7 @@ export interface EntryListResponse {
   overall_stats: OverallStats;
 }
 
+// Factory for a blank entry
+export function emptyEntry(): FuelEntryInput {
+  return { date: '', distance: 0, liters: 0, price_per_liter: 0, notes: '' };
+}

@@ -1,8 +1,7 @@
 <!-- ui/src/views/log-view.vue -->
-<!-- ui/src/views/log-view.vue -->
 <template>
   <section class="log">
-    <h1 class="log__headline">Log</h1>
+    <h1 class="view__headline">📊Log</h1>
 
     <!-- Feedback message block -->
     <transition name="fade">
@@ -16,27 +15,27 @@
       <div class="log__fields">
         <div class="log__field">
           <label class="log__label">Date</label>
-          <input v-model="newEntry.date" type="date" required class="log__input" />
+          <input v-model="newEntry.date" type="date" required class="input" />
         </div>
         <div class="log__field">
           <label class="log__label">Distance (km)</label>
-          <input v-model.number="newEntry.distance" type="number" step="0.01" class="log__input" />
+          <input v-model.number="newEntry.distance" type="number" step="0.01" class="input" />
         </div>
         <div class="log__field">
           <label class="log__label">Liters</label>
-          <input v-model.number="newEntry.liters" type="number" step="0.01" class="log__input" />
+          <input v-model.number="newEntry.liters" type="number" step="0.01" class="input" />
         </div>
         <div class="log__field">
           <label class="log__label">Price per Liter</label>
-          <input v-model.number="newEntry.price_per_liter" type="number" step="0.01" class="log__input" />
+          <input v-model.number="newEntry.price_per_liter" type="number" step="0.01" class="input" />
         </div>
         <div class="log__field">
           <label class="log__label">Notes</label>
-          <input v-model="newEntry.notes" type="text" class="log__input" />
+          <input v-model="newEntry.notes" type="text" class="input" />
         </div>
       </div>
 
-      <button type="submit" class="log__add-btn">Add Entry</button>
+      <button type="submit" class="button button--primary">Add Entry</button>
     </form>
 
     <!-- Controls -->
@@ -105,20 +104,20 @@
             <button
               v-if="editingId !== entry.id"
               @click="startEdit(entry)"
-              class="log__edit-btn"
+              class="button button--secondary"
             >
               Edit
             </button>
             <button
               v-else
               @click="saveEdit(entry.id)"
-              class="log__save-btn"
+              class="button button--primary"
             >
               Save
             </button>
             <button
               @click="onDeleteEntry(entry.id)"
-              class="log__delete-btn"
+              class="button button--danger"
             >
               Delete
             </button>
@@ -140,21 +139,29 @@
         <input type="file" accept=".csv" @change="onCsvUpload" class="input input--file" />
         <div class="log__bulk-actions">
           <button @click="onExportCsv" class="button button--secondary">Export CSV</button>
-          <button @click="onPurgeDatabase" class="button button--danger">Purge ✖</button>
+          <button @click="onPurgeDatabase" class="button button--danger">Purge All Entries</button>
         </div>
       </div>
     </div>
   </section>
 </template>
 
-
-
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useFuelStore } from '../stores/fuel-store';
+import { storeToRefs } from 'pinia';
 import type { FuelEntryDB, FuelEntryInput } from '../types/fuel-entry';
 
+// Composables & utils
+import { useFeedback } from '../composables/useFeedback';
+import { useEntries } from '../composables/useEntries';   // ✅ import the composable
+import { formatDate } from '../utils/format';
+import { parseCsvRows, toCsv, downloadCsv } from '../utils/csv';
+import { emptyEntry } from '../types/fuel-entry';
+
 const fuelStore = useFuelStore();
+const { entries } = storeToRefs(fuelStore); // ✅ entries is a Ref<FuelEntryDB[]>
+const { feedbackMessage, feedbackType, showFeedback } = useFeedback();
 
 // -------------------- State --------------------
 const sortOrder = ref<'newest' | 'oldest'>('newest');
@@ -165,62 +172,26 @@ const newEntry = ref<FuelEntryInput>(emptyEntry());
 const editingId = ref<number | null>(null);
 const editData = ref<FuelEntryInput>(emptyEntry());
 
-// Feedback state
-const feedbackMessage = ref("");
-const feedbackType = ref<"success" | "error" | "">("");
-
-// Helper to show feedback and auto‑clear
-function showFeedback(message: string, type: "success" | "error") {
-  feedbackMessage.value = message;
-  feedbackType.value = type;
-  setTimeout(() => {
-    feedbackMessage.value = "";
-    feedbackType.value = "";
-  }, 3000); // disappears after 3 seconds
-}
-
 // -------------------- Lifecycle --------------------
 onMounted(() => fuelStore.fetchEntriesAndStats());
 
 // -------------------- Computed --------------------
-const filteredEntries = computed<FuelEntryDB[]>(() =>
-  filterText.value
-    ? fuelStore.entries.filter((e) =>
-        e.notes?.toLowerCase().includes(filterText.value.toLowerCase())
-      )
-    : fuelStore.entries
+const { filteredEntries, sortedEntries, visibleEntries } = useEntries(   // ✅ call composable
+  entries,      // pass Ref<FuelEntryDB[]>
+  sortField,
+  sortOrder,
+  filterText
 );
-
-const sortedEntries = computed<FuelEntryDB[]>(() => {
-  const list = [...filteredEntries.value];
-  list.sort((a, b) => {
-    if (sortField.value === 'date') {
-      const da = a.date ? new Date(a.date).getTime() : 0;
-      const db = b.date ? new Date(b.date).getTime() : 0;
-      return sortOrder.value === 'newest' ? db - da : da - db;
-    }
-    const av = a[sortField.value] ?? 0;
-    const bv = b[sortField.value] ?? 0;
-    return sortOrder.value === 'newest'
-      ? (bv as number) - (av as number)
-      : (av as number) - (bv as number);
-  });
-  return list;
-});
-
-const visibleEntries = computed(() => {
-  return sortedEntries.value.slice(0, 5); // show only 5 entries
-});
 
 // -------------------- Actions --------------------
 async function onAddEntry(): Promise<void> {
   try {
     await fuelStore.addEntry(newEntry.value);
     newEntry.value = emptyEntry();
-    showFeedback("Entry added successfully!", "success");
+    showFeedback('Entry added successfully!', 'success');
   } catch (err) {
     console.error('Failed to add entry', err);
-    showFeedback("Failed to add entry.", "error");
+    showFeedback('Failed to add entry.', 'error');
   }
 }
 
@@ -240,34 +211,25 @@ async function saveEdit(id: number): Promise<void> {
     await fuelStore.updateExistingEntry(id, editData.value);
     editingId.value = null;
     editData.value = emptyEntry();
-    showFeedback("Entry updated successfully!", "success");
+    showFeedback('Entry updated successfully!', 'success');
   } catch (err) {
     console.error('Failed to update entry', err);
-    showFeedback("Failed to update entry.", "error");
+    showFeedback('Failed to update entry.', 'error');
   }
 }
 
 async function onDeleteEntry(id: number): Promise<void> {
   try {
     await fuelStore.removeEntry(id);
-    showFeedback("Entry deleted successfully!", "success");
+    showFeedback('Entry deleted successfully!', 'success');
   } catch (err) {
     console.error('Failed to delete entry', err);
-    showFeedback("Failed to delete entry.", "error");
+    showFeedback('Failed to delete entry.', 'error');
   }
 }
 
-// -------------------- Helpers --------------------
-function formatDate(dateStr?: string | null): string {
-  return dateStr ? new Date(dateStr).toLocaleDateString() : '';
-}
-
-function emptyEntry(): FuelEntryInput {
-  return { date: '', distance: 0, liters: 0, price_per_liter: 0, notes: '' };
-}
-
 // -------------------- CSV Import --------------------
-function onCsvUpload(event: Event): void {
+async function onCsvUpload(event: Event): Promise<void> {
   const input = event.target as HTMLInputElement;
   if (!input.files?.length) return;
 
@@ -277,82 +239,43 @@ function onCsvUpload(event: Event): void {
     const text = e.target?.result as string;
     const rows = text.trim().split('\n');
 
-    // Header validation
     const header = rows[0].trim().toLowerCase();
-    const expected = "date,distance,liters,price_per_liter,notes";
+    const expected = 'date,distance,liters,price_per_liter,notes';
     if (header !== expected) {
-      showFeedback(`Invalid CSV format. Expected header: ${expected}`, "error");
+      showFeedback(`Invalid CSV format. Expected header: ${expected}`, 'error');
       return;
     }
 
-    const entries = parseCsvRows(rows);
-    let importedCount = 0;
-    for (const entry of entries) {
-      try {
-        await fuelStore.addEntry(entry);
-        importedCount++;
-      } catch (err) {
-        console.error('Failed to import entry:', entry, err);
-      }
-    }
-
-    showFeedback(`Imported ${importedCount} entries successfully.`, "success");
+    const entriesToImport = parseCsvRows(rows);
+    const importedCount = await fuelStore.bulkImport(entriesToImport);
+    showFeedback(`Imported ${importedCount} entries successfully.`, 'success');
   };
 
   reader.readAsText(file);
 }
+
 // -------------------- Export CSV --------------------
 function onExportCsv(): void {
-  const header = "date,distance,liters,price_per_liter,notes\n";
-  const rows = fuelStore.entries.map(e =>
-    `${e.date},${e.distance},${e.liters},${e.price_per_liter},${e.notes || ""}`
-  );
-  const csvContent = header + rows.join("\n");
-
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.setAttribute("download", "fuel_log.csv");
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-
-  showFeedback("CSV exported successfully!", "success");
+  const csvContent = toCsv(entries.value); // ✅ use Ref value
+  downloadCsv(csvContent, 'fuel_log.csv');
+  showFeedback('CSV exported successfully!', 'success');
 }
 
 // -------------------- Purge Database --------------------
 async function onPurgeDatabase(): Promise<void> {
-  if (!confirm("Are you sure you want to delete ALL entries?")) return;
+  if (!confirm('Are you sure you want to delete ALL entries?')) return;
   try {
-    await fuelStore.clearAllEntries(); // implement in your store
-    showFeedback("All entries removed successfully!", "success");
+    await fuelStore.clearAllEntries();
+    showFeedback('All entries removed successfully!', 'success');
   } catch (err) {
-    console.error("Failed to purge database", err);
-    showFeedback("Failed to purge database.", "error");
+    console.error('Failed to purge database', err);
+    showFeedback('Failed to purge database.', 'error');
   }
 }
-
-function parseCsvRows(rows: string[]): FuelEntryInput[] {
-  // Expecting header row: date,distance,liters,price_per_liter,notes
-  return rows.slice(1).map((row) => {
-    const [date, distance, liters, price_per_liter, ...notesParts] = row.split(',');
-    const notes = notesParts.join(','); // allow commas in notes
-    return {
-      date: date?.trim() || '',
-      distance: Number(distance) || 0,
-      liters: Number(liters) || 0,
-      price_per_liter: Number(price_per_liter) || 0,
-      notes: notes?.trim() || ''
-    };
-  }).filter((entry) =>
-    entry.date &&
-    !isNaN(entry.distance) &&
-    !isNaN(entry.liters) &&
-    !isNaN(entry.price_per_liter)
-  );
-}
 </script>
+
+
+
 
 <style scoped>
 /* ==========================================================================
@@ -377,6 +300,7 @@ function parseCsvRows(rows: string[]): FuelEntryInput[] {
 
 /* Add Entry Form */
 .log__add-form {
+  align-self: flex-start;
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
@@ -385,6 +309,12 @@ function parseCsvRows(rows: string[]): FuelEntryInput[] {
   padding-bottom: var(--space-sm);
   margin-bottom: var(--space-sm);
 }
+
+.log__add-form .button {
+  align-self: flex-start;  /* or center if you prefer */
+  width: 15%;
+}
+
 
 .log__fields {
   display: flex;
@@ -416,46 +346,41 @@ function parseCsvRows(rows: string[]): FuelEntryInput[] {
   color: var(--color-text);
 }
 
-/* Add Entry button */
-.log__add-btn {
-  align-self: flex-start;
-  background-color: var(--color-success);
-  color: #fff;
-  font-weight: 500;
-  margin-top: var(--space-xs);
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  padding: var(--space-sm) var(--space-md);
-  font-size: var(--font-size-md);
-  transition: background-color var(--transition-fast);
-}
-.log__add-btn:hover {
-  background-color: var(--color-success-hover);
-}
-.log__add-btn:disabled {
-  background-color: var(--color-border);
-  cursor: not-allowed;
-}
 
-/* Controls */
+
+/* Controls wrapper */
 .log__controls {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-md);
+  justify-content: flex-start;   /* prevents space-between pushing items apart */
+  gap: var(--space-sm);          /* consistent horizontal spacing */
   margin-bottom: var(--space-sm);
 }
 
+/* Prevent hidden flex growth creating big gaps */
+.log__controls > * {
+  flex: 0 0 auto;                /* no stretching or shrinking */
+  margin-left: 0;                /* cancel auto margins */
+}
+
+/* Each control (label + field) */
 .log__control {
   display: flex;
   align-items: center;
-  gap: var(--space-xs);
+  gap: 0.5rem;                   /* space between label text and field */
   white-space: nowrap;
 }
 
-.log__control .select,
-.log__control .input {
+/* Dropdowns */
+.log__control select {
+  width: auto;                   /* shrink to fit content */
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+}
+
+/* Text inputs */
+.log__control input {
   min-width: 160px;
   height: 2rem;
   padding: 0 var(--space-sm);
@@ -466,10 +391,18 @@ function parseCsvRows(rows: string[]): FuelEntryInput[] {
   color: var(--color-text);
 }
 
-.log__control .select option {
+/* Dropdown options */
+.log__control select option {
   background-color: var(--color-input-bg);
   color: var(--color-text);
 }
+
+/* Make only the search input expand if needed */
+.log__control--search input {
+  flex: 1;                       /* allow search to take leftover space */
+  min-width: 16ch;
+}
+
 
 /* Action buttons */
 .log__actions {

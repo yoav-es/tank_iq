@@ -1,5 +1,7 @@
+/* ui/src/main.css */
+
 /* ==========================================================================
-   Design tokens (dark theme)
+   Design tokens (light theme defaults)
    ========================================================================== */
 
 :root {
@@ -8,6 +10,61 @@
   --color-secondary: #10B981;
   --color-secondary-hover: #059669;
 
+  --color-background: #f9fafb;
+  --color-content: #ffffff;
+  --color-surface: #f3f4f6;
+  --color-card: #ffffff;
+  --color-sidebar-bg: #f3f4f6;
+  --color-footer-bg: #e5e7eb;
+
+  --color-text: #111827;
+  --color-text-strong: #000000;
+  --color-accent: #3B82F6;
+  --color-border: #d1d5db;
+
+  --color-success: #16a34a;
+  --color-success-hover: #15803d;
+  --color-danger: #dc2626;
+  --color-danger-hover: #b91c1c;
+
+  --color-row-light: #f9fafb;
+  --color-row-dark: #f3f4f6;
+  --color-row-hover: #e5e7eb;
+
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+
+  --font-base: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  --font-size-xs: 0.75rem;   /* ~12px */
+  --font-size-sm: 0.8125rem; /* ~13px */
+  --font-size-md: 0.875rem;  /* ~14px */
+  --font-size-lg: 1.0625rem; /* ~17px */
+  --font-size-xl: 1.375rem;  /* ~22px */
+
+  /* Line heights */
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.4;
+  --line-height-relaxed: 1.6;
+
+  --radius-sm: 4px;
+  --radius-lg: 10px;
+
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.1);
+
+  --z-toast: 1000;
+
+  --transition-fast: 0.2s ease;
+  --transition-slow: 0.5s ease;
+}
+
+/* ==========================================================================
+   Dark theme overrides
+   ========================================================================== */
+
+html.dark {
   --color-background: #111827;
   --color-content: #374151;
   --color-surface: #1F2937;
@@ -17,42 +74,14 @@
 
   --color-text: #F9FAFB;
   --color-text-strong: #ffffff;
-  --color-accent: #3B82F6;
   --color-border: #2d3748;
-
-  --color-success: #006400;
-  --color-success-hover: #004d00;
-  --color-danger: #dc2626;
-  --color-danger-hover: #b91c1c;
 
   --color-row-light: #1f2937;
   --color-row-dark: #2d3748;
   --color-row-hover: #374151;
 
-  --space-xs: 0.25rem;
-  --space-sm: 0.5rem;
-  --space-md: 1rem;
-  --space-lg: 1.5rem;
-  --space-xl: 2rem;
-
-  --font-base: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-  --font-size-xs: 0.75rem;
-  --font-size-sm: 0.875rem;
-  --font-size-md: 0.9rem;
-  --font-size-lg: 1.2rem;
-  --font-size-xl: 1.8rem;
-
-  --radius-sm: 4px;
-  --radius-lg: 10px;
-
   --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.4);
-
-  --z-toast: 1000;
-
-  --transition-fast: 0.2s ease;
-  --transition-slow: 0.5s ease;
 }
-
 /* ==========================================================================
    Base
    ========================================================================== */
@@ -95,6 +124,16 @@ h1, h2, h3, h4, h5, h6 {
 .u-p-md { padding: var(--space-md); }
 .u-mb-sm { margin-bottom: var(--space-sm); }
 .u-mb-md { margin-bottom: var(--space-md); }
+/* ==========================================================================
+   Separator
+   ========================================================================== */
+
+.field__separator {
+  border: none;
+  border-top: 2px solid var(--color-border);
+  margin: var(--space-md) 0;
+}
+
 
 /* ==========================================================================
    Inputs & selects
@@ -118,27 +157,42 @@ h1, h2, h3, h4, h5, h6 {
    Buttons
    ========================================================================== */
 
+/* Base button */
 .button {
+  display: inline-flex;          /* ensures vertical centering */
+  align-items: center;
+  justify-content: center;
   border: none;
   border-radius: var(--radius-sm);
   cursor: pointer;
   padding: var(--space-sm) var(--space-md);
   font-size: var(--font-size-md);
+  font-weight: 500;
+  line-height: 1.2;
   color: #fff;
   transition: background-color var(--transition-fast);
 }
-.button:focus { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 
-.button--primary { background-color: var(--color-primary); }
-.button--primary:hover { background-color: var(--color-primary-hover); }
+.button:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.button--primary   { background-color: var(--color-primary); }
 .button--secondary { background-color: var(--color-secondary); }
-.button--secondary:hover { background-color: var(--color-secondary-hover); }
-.button--success { background-color: var(--color-success); }
-.button--success:hover { background-color: var(--color-success-hover); }
-.button--danger { background-color: var(--color-danger); }
-.button--danger:hover { background-color: var(--color-danger-hover); }
-.button--disabled { background-color: var(--color-border); cursor: not-allowed; }
+.button--success   { background-color: var(--color-success); }
+.button--danger    { background-color: var(--color-danger); }
 
+.button--primary:hover   { background-color: var(--color-primary-hover); }
+.button--secondary:hover { background-color: var(--color-secondary-hover); }
+.button--success:hover   { background-color: var(--color-success-hover); }
+.button--danger:hover    { background-color: var(--color-danger-hover); }
+
+.button--disabled {
+  background-color: var(--color-border);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
 /* ==========================================================================
    Table
    ========================================================================== */
@@ -295,6 +349,18 @@ h1, h2, h3, h4, h5, h6 {
 .log__csv-desc {
   margin-bottom: var(--space-xs);
   color: var(--color-text);
+}
+
+.view__headline {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--color-text-strong);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin: 0;
+  border-bottom: 2px solid var(--color-border);
+  padding-bottom: var(--space-sm); /* consistent spacing before separator */
 }
 
 /* Small screens: make controls stack cleanly */

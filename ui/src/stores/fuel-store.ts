@@ -135,6 +135,21 @@ export const useFuelStore = defineStore('fuel', {
         this.error = err instanceof Error ? err.message : 'Unknown error';
         throw err;
       }
+    },
+    async bulkImport(entriesToImport: FuelEntryInput[]): Promise<number> {
+      let importedCount = 0;
+      for (const entry of entriesToImport) {
+        try {
+          await this.addEntry(entry);
+          importedCount++;
+        } catch (err) {
+          console.error('Failed to import entry:', entry, err);
+        }
+      }
+      return importedCount;
     }
   },
+
 });
+
+
