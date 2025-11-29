@@ -1,8 +1,18 @@
-# tests/test_utils.py
+"""
+TankIQ Utilities Tests
+
+This module contains unit tests for helper functions in app/utils.py.
+It verifies calculations for individual entries and aggregated overall
+statistics using pytest.
+"""
 
 import pytest
+import logging
 from app.utils import calculate_entry_stats, get_overall_stats
 from app.models import OverallStats
+from app.utils import get_best_efficiency
+from app.utils import convert_entries_to_csv
+from app.models import TimePeriodStats
 
 # --- Shared Test Data ---
 LITERS = 50.0
@@ -24,7 +34,7 @@ ENTRY_LIST_DATA = [
     (LITERS, PRICE, 0.0, 75.0, 0.0),         # zero distance
 ])
 def test_calculate_entry_stats(liters, price, distance, expected_cost, expected_kmpl):
-    """Tests calculation of cost and km/L for different scenarios."""
+    """Verify calculation of cost and km/L for different scenarios."""
     stats = calculate_entry_stats(liters, price, distance)
     assert stats["total_cost"] == pytest.approx(expected_cost)
     assert stats["km_per_liter"] == pytest.approx(expected_kmpl)
@@ -36,7 +46,7 @@ def test_calculate_entry_stats(liters, price, distance, expected_cost, expected_
     ([], 0, 0.0, 0.0, 0.0, 0.0),                       # empty list
 ])
 def test_get_overall_stats(entries, expected_count, expected_liters, expected_distance, expected_cost, expected_kmpl):
-    """Tests overall stats calculation with multiple entries and empty list."""
+    """Verify overall stats calculation with multiple entries and empty list."""
     stats_model = get_overall_stats(entries)
     assert isinstance(stats_model, OverallStats)
     assert stats_model.entry_count == expected_count
@@ -44,3 +54,59 @@ def test_get_overall_stats(entries, expected_count, expected_liters, expected_di
     assert stats_model.total_distance == pytest.approx(expected_distance)
     assert stats_model.total_cost == pytest.approx(expected_cost)
     assert stats_model.average_km_per_liter == pytest.approx(expected_kmpl, rel=1e-2)
+
+
+def test_get_best_efficiency_returns_highest_kmpl():
+    """Verify that get_best_efficiency returns the highest km/L value."""
+    period_stats = [
+        TimePeriodStats(
+            period_label="2024-01",
+            total_liters=50.0,
+            total_cost=100.0,
+            total_distance=600.0,
+            count=1,
+            average_km_per_liter=12.0,
+            average_cost_per_liter=2.0,
+        ),
+        TimePeriodStats(
+            period_label="2024-02",
+            total_liters=40.0,
+            total_cost=90.0,
+            total_distance=620.0,
+            count=1,
+            average_km_per_liter=15.5,
+            average_cost_per_liter=2.25,
+        ),
+        TimePeriodStats(
+            period_label="2024-03",
+            total_liters=45.0,
+            total_cost=95.0,
+            total_distance=630.0,
+            count=1,
+            average_km_per_liter=14.0,
+            average_cost_per_liter=2.1,
+        ),
+    ]
+    best = get_best_efficiency(period_stats)
+    assert best == 15.5
+
+
+def test_convert_entries_to_csv_contains_expected_headers_and_values():
+    """Verify that convert_entries_to_csv produces valid CSV with headers and entry values."""
+    entries = [
+        {"id": 1, "date": "2024-11-01", "liters": 50.0, "price_per_liter": 1.5,
+         "distance": 800.0, "notes": "Trip"}
+    ]
+    csv_data = convert_entries_to_csv(entries).replace("\r\n", "\n")
+    assert "id,date,liters,price_per_liter,distance,notes" in csv_data
+    assert "1,2024-11-01,50.0,1.5,800.0,Trip" in csv_data
+
+def test_get_overall_stats_logs_warning_for_unrealistic_cost(caplog):
+    """Verify that get_overall_stats logs a warning when average cost per liter exceeds threshold."""
+    high_cost_entries = [
+        {"liters": 10.0, "price_per_liter": 25.0, "distance": 100.0},  # cost per liter > 20
+    ]
+    with caplog.at_level(logging.WARNING):
+        stats_model = get_overall_stats(high_cost_entries)
+    assert "Average cost per liter looks unrealistic" in caplog.text
+    assert stats_model.average_cost_per_liter > 20

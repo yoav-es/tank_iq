@@ -1,18 +1,29 @@
-# tests/test_database.py
+"""
+TankIQ Database Tests
+
+This module contains integration tests for database-backed FastAPI endpoints.
+It verifies CRUD operations, statistics aggregation, and multi-period summaries
+using a clean SQLite database file for isolation.
+"""
+
 import os
 import sqlite3
 import pytest
 from fastapi.testclient import TestClient
-
 from app.server import app
-from app.database import DATABASE_PATH, init_db
+from app.database import DATABASE_PATH, init_db, delete_all_entries
 
 client = TestClient(app)
 
 # --- Fixtures and Setup ---
 @pytest.fixture(autouse=True, scope="module")
 def setup_db():
-    """Setup and teardown for API tests using a clean database file."""
+    """
+    Setup and teardown for API tests using a clean database file.
+
+    Ensures the database file is removed before and after the test module,
+    and initializes a fresh schema for consistent test runs.
+    """
     if os.path.exists(DATABASE_PATH):
         os.remove(DATABASE_PATH)
 
@@ -25,7 +36,11 @@ def setup_db():
 
 @pytest.fixture(autouse=True)
 def clean_entries():
-    """Clear entries between individual tests for isolation."""
+    """
+    Clear entries between individual tests for isolation.
+
+    Ensures each test runs against an empty fuel_entries table.
+    """
     conn = sqlite3.connect(DATABASE_PATH)
     conn.execute("DELETE FROM fuel_entries")
     conn.commit()
@@ -64,7 +79,7 @@ ALL_ENTRIES = [ENTRY_1, ENTRY_2, ENTRY_3, ENTRY_4]
 
 # --- Tests ---
 def test_list_entries_empty():
-    """GET /entries/ returns empty list and zeroed stats when DB is empty."""
+    """Verify that GET /entries returns empty list and zeroed stats when DB is empty."""
     response = client.get("/entries/")
     assert response.status_code == 200
     data = response.json()
@@ -81,7 +96,7 @@ def test_list_entries_empty():
     (ENTRY_4, 80.0, 15.0),
 ])
 def test_create_entry_parametrized(entry, expected_cost, expected_kmpl):
-    """POST /entries/ creates entries with calculated fields."""
+    """Verify that POST /entries creates entries with correct calculated fields."""
     response = client.post("/entries/", json=entry)
     assert response.status_code == 201
     data = response.json()
@@ -94,7 +109,7 @@ def test_create_entry_parametrized(entry, expected_cost, expected_kmpl):
     (ALL_ENTRIES, 4, 125.0, 1800.0, 205.0, 14.40),
 ])
 def test_stats_counts(entries, expected_count, expected_liters, expected_distance, expected_cost, expected_kmpl):
-    """GET /stats/ returns correct overall statistics for different sets of entries."""
+    """Verify that GET /stats returns correct overall statistics for different sets of entries."""
     for e in entries:
         client.post("/entries/", json=e)
     response = client.get("/stats/")
@@ -107,7 +122,7 @@ def test_stats_counts(entries, expected_count, expected_liters, expected_distanc
     assert overall["average_km_per_liter"] == pytest.approx(expected_kmpl, rel=1e-2)
 
 def test_get_detailed_stats_empty():
-    """GET /stats/ returns zeroed stats when DB is empty."""
+    """Verify that GET /stats returns zeroed stats when DB is empty."""
     response = client.get("/stats/")
     assert response.status_code == 200
     data = response.json()
@@ -118,7 +133,7 @@ def test_get_detailed_stats_empty():
     assert data["yearly_stats"] == []
 
 def test_get_detailed_stats_multi_period():
-    """GET /stats/ returns correct monthly and yearly aggregations."""
+    """Verify that GET /stats returns correct monthly and yearly aggregations."""
     for entry in ALL_ENTRIES:
         client.post("/entries/", json=entry)
     response = client.get("/stats/")
@@ -136,3 +151,51 @@ def test_get_detailed_stats_multi_period():
 
     yearly = sorted(data["yearly_stats"], key=lambda x: x["period_label"])
     assert [y["period_label"] for y in yearly] == ["2023", "2024"]
+
+def test_delete_all_entries_removes_rows():
+    """Verify that delete_all_entries deletes all rows from the table."""
+    init_db(DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH)
+    conn.execute(
+        "INSERT INTO fuel_entries (date, liters, price_per_liter, distance, notes) VALUES (?, ?, ?, ?, ?)",
+        ("2024-11-01", 50.0, 1.5, 800.0, "Trip"),
+    )
+    conn.commit()
+    conn.close()
+
+    assert delete_all_entries() is True
+
+    conn = sqlite3.connect(DATABASE_PATH)
+    count = conn.execute("SELECT COUNT(*) FROM fuel_entries").fetchone()[0]
+    conn.close()
+    assert count == 0
+
+def test_delete_all_entries_on_empty_db():
+    """Verify that delete_all_entries works safely when DB is already empty."""
+    init_db(DATABASE_PATH)
+    assert delete_all_entries() is True
+    conn = sqlite3.connect(DATABASE_PATH)
+    count = conn.execute("SELECT COUNT(*) FROM fuel_entries").fetchone()[0]
+    conn.close()
+    assert count == 0
+
+def test_delete_all_entries_resets_api_stats():
+    """Verify that delete_all_entries resets API stats to zero."""
+    # Insert via API
+    client.post("/entries/", json={
+        "date": "2024-11-01",
+        "liters": 50.0,
+        "price_per_liter": 1.5,
+        "distance": 800.0,
+        "notes": "Trip"
+    })
+    # Confirm stats non-zero
+    response = client.get("/stats/")
+    assert response.json()["overall_stats"]["entry_count"] == 1
+
+    # Purge
+    assert delete_all_entries() is True
+
+    # Stats should reset
+    response = client.get("/stats/")
+    assert response.json()["overall_stats"]["entry_count"] == 0

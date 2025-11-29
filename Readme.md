@@ -14,15 +14,18 @@ This project follows:
 # 📂 Project Structure – TankIQ
 
 - TankIQ/
-  - app/                        # Core application logic
-    - __init__.py               # Initializes the app package
-    - models.py                 # Defines FuelEntry class and data schema
-    - database.py                # Handles SQLite connection and setup
-    - routes.py                  # FastAPI endpoints for CRUD operations
-    - utils.py                   # Fuel statistics and calculations
-    - plots.py                   # Graph generation with matplotlib/seaborn
-  - tests/                       # Unit, integration, and functional tests
-  - ui/                          # Vue 3 frontend
+  - app/                         # Core application logic
+      - __init__.py              # Initializes the app package
+      - models.py                # Defines Pydantic schemas for entries and statistics
+      - database.py              # Manages SQLite connection, schema initialization, and CRUD operations
+      - api.py                   # FastAPI router with CRUD endpoints, stats, and CSV export
+      - server.py                # FastAPI app initialization, logging, lifespan events, and CORS middleware
+      - utils.py                 # Helper functions for calculations, statistics, and CSV conversion
+  - `tests/`                      # Unit, integration, and functional tests
+    - `test_utils.py`             # Unit tests for utility functions
+    - `test_models.py`            # Validation and schema tests for Pydantic models
+    - `test_database.py`          # Integration tests for SQLite database operations
+    - `test_api.py`               # Functional tests for FastAPI endpoints (CRUD, stats, export)  - ui/                          # Vue 3 frontend
     - src/
       - router/
         - index.ts               # Vue Router setup
@@ -64,15 +67,32 @@ This project follows:
 - **Statistics Endpoint (`/stats/`):** Returns overall, monthly, and yearly fuel efficiency statistics in **km/L** and total cost.
 - **Metric Consistency:** Entire system standardized to **km/L** (removed old L/100km metric).
 - **Aggregated Statistics:** Supports calculations for specific time periods.
+- **CSV Export (`/entries/export/`):** Download entries as CSV, with optional date range filters.
 
 ### Stability & Reliability
 - **Error Handling:** Fixed runtime errors (500s, validation errors, floating‑point issues).
 - **Import Fix:** Corrected `ImportError` in `app/server.py` with explicit imports.
-- **Testing:**  
-  - Unit tests for utilities  
-  - Integration tests for database CRUD  
-  - Functional API tests with TestClient
+- **Testing:** Comprehensive coverage across all backend modules.
 
+---
+## 🧪 Tests
+
+The backend is fully covered by automated tests:
+
+- **Unit Tests (utils):**  
+  Validate calculation helpers (`calculate_entry_stats`, `get_overall_stats`, `get_best_efficiency`, `convert_entries_to_csv`) including edge cases like empty input.
+
+- **Model Tests (models):**  
+  Ensure Pydantic validators enforce correct date formats and non‑negative values. All schemas (`FuelEntryBase`, `FuelEntryDB`, `OverallStats`, `TimePeriodStats`, `DetailedStats`, `EntryList`) are exercised.
+
+- **Database Tests (database.py):**  
+  Cover initialization, connection handling, and deletion logic (`delete_all_entries`) with both populated and empty tables.
+
+- **API Tests (api.py):**  
+  Functional tests using FastAPI’s `TestClient`:
+  - CRUD endpoints (`/entries/`)  
+  - Statistics endpoint (`/stats/`)  
+  - Export endpoint (`/entries/export/`) including empty DB and date‑filtered exports  
 ---
 
 ## 🎨 Frontend Summary

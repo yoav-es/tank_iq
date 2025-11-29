@@ -1,13 +1,22 @@
 # app/models.py
+"""
+TankIQ Models Module
+
+This module defines the Pydantic models used for request validation,
+database responses, and statistical aggregations. It ensures consistent
+schemas across API endpoints and enforces data integrity.
+"""
+
 from datetime import date
 from typing import Optional, List
-
 from pydantic import BaseModel, field_validator, ConfigDict
 
 
 # --- 1. Base Model (Shared Fields) ---
 class FuelEntryBase(BaseModel):
-    """Base model containing fields common to all entries."""
+    """
+    Base model containing fields common to all fuel entries.
+    """
 
     date: str
     liters: float
@@ -18,23 +27,38 @@ class FuelEntryBase(BaseModel):
     @field_validator("date")
     @classmethod
     def validate_date_format(cls, value: str) -> str:
-        """Ensure the date is in YYYY-MM-DD format."""
+        """
+        Validate that the date is in YYYY-MM-DD format.
+        """
         try:
             date.fromisoformat(value)
             return value
         except ValueError as exc:
             raise ValueError("Date must be in YYYY-MM-DD format.") from exc
 
+    @field_validator("liters", "price_per_liter", "distance")
+    @classmethod
+    def validate_non_negative(cls, value: float) -> float:
+        """
+        Ensure liters, price_per_liter, and distance are non-negative.
+        """
+        if value < 0:
+            raise ValueError("Value must be non-negative.")
+        return value
 
 # --- 2. Input/Create/Update Models ---
 class FuelEntryCreate(FuelEntryBase):
-    """Schema for receiving new data from a POST request."""
-    pass
+    """
+    Schema for creating a new fuel entry via POST request.
+    """
+    ...
 
 
 class FuelEntryUpdate(FuelEntryBase):
-    """Schema for updating an existing entry."""
-    pass
+    """
+    Schema for updating an existing fuel entry via PUT request.
+    """
+    ...
 
 
 # --- 3. Database/Output Model (Includes Calculated Fields) ---
@@ -53,7 +77,9 @@ class FuelEntryDB(FuelEntryBase):
 
 # --- 4. Overall Stats Model ---
 class OverallStats(BaseModel):
-    """Schema for overall calculated statistics across all entries."""
+    """
+    Schema for overall calculated statistics across all entries.
+    """
 
     total_distance: float
     total_liters: float
@@ -72,11 +98,11 @@ class TimePeriodStats(BaseModel):
     (e.g., month or year).
     """
 
-    period_label: str  # e.g., "2024-07" or "2023"
+    period_label: str  # Example: "2024-07" or "2023"
     total_liters: float
     total_cost: float
     total_distance: float
-    count: int  # Number of fills in this period
+    count: int  # Number of entries in this period
     average_km_per_liter: float
     average_cost_per_liter: float
 
@@ -84,8 +110,8 @@ class TimePeriodStats(BaseModel):
 # --- 6. Detailed Stats Response Model ---
 class DetailedStats(BaseModel):
     """
-    Comprehensive response model for the GET /stats/ endpoint,
-    combining overall, monthly, yearly, and optional custom range aggregations.
+    Comprehensive response model for the GET /stats/ endpoint.
+    Combines overall, monthly, yearly, and optional custom range aggregations.
     """
 
     overall_stats: OverallStats

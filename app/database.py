@@ -1,4 +1,12 @@
 # app/database.py
+"""
+TankIQ Database Module
+
+This module manages the SQLite database connection, schema initialization,
+and CRUD operations for fuel entries. It also provides aggregation queries
+for monthly, yearly, and custom statistics.
+"""
+
 import sqlite3
 import logging
 from typing import Optional, Generator, List, Dict, Any
@@ -15,12 +23,15 @@ DATABASE_PATH = BASE_DIR / "data" / "fuel_log.db"
 
 
 def create_db_connection(db_path: Path = DATABASE_PATH) -> sqlite3.Connection:
-    """Create a SQLite database connection."""
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    # Warn if the database file does not exist yet
-    if not db_path.exists():
-        logger.warning(f"Database file {db_path} not found. It will be created.")
+    """
+    Create a SQLite database connection.
 
+    Notes:
+        If the database file does not exist, it will be created automatically.
+    """
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    if not db_path.exists():
+        logger.warning("Database file %s not found. It will be created.", db_path)
 
     conn = sqlite3.connect(str(db_path))
     conn.row_factory = sqlite3.Row
@@ -29,7 +40,12 @@ def create_db_connection(db_path: Path = DATABASE_PATH) -> sqlite3.Connection:
 
 @contextmanager
 def get_db(db_path: Path = DATABASE_PATH) -> Generator[sqlite3.Connection, None, None]:
-    """Context manager for database connections."""
+    """
+    Provide a context-managed database connection.
+
+    Yields:
+        sqlite3.Connection: Active database connection.
+    """
     conn = create_db_connection(db_path)
     try:
         yield conn
@@ -38,7 +54,9 @@ def get_db(db_path: Path = DATABASE_PATH) -> Generator[sqlite3.Connection, None,
 
 
 def init_db(db_path: Path = DATABASE_PATH) -> None:
-    """Initialize the database schema."""
+    """
+    Initialize the database schema if it does not exist.
+    """
     with get_db(db_path) as conn:
         conn.execute(
             """
@@ -57,7 +75,9 @@ def init_db(db_path: Path = DATABASE_PATH) -> None:
 
 
 def _row_to_fuel_entry_db(row: sqlite3.Row) -> FuelEntryDB:
-    """Convert a SQLite row to FuelEntryDB."""
+    """
+    Convert a SQLite row to a FuelEntryDB object.
+    """
     entry_dict = dict(row)
     stats = calculate_entry_stats(
         entry_dict["liters"], entry_dict["price_per_liter"], entry_dict["distance"]
@@ -67,7 +87,9 @@ def _row_to_fuel_entry_db(row: sqlite3.Row) -> FuelEntryDB:
 
 
 def _row_to_timeperiod(row: sqlite3.Row) -> TimePeriodStats:
-    """Convert a SQLite row to TimePeriodStats."""
+    """
+    Convert a SQLite row to a TimePeriodStats object.
+    """
     total_liters = row["total_liters"]
     total_distance = row["total_distance"]
     total_cost = row["total_cost"]
@@ -85,7 +107,15 @@ def _row_to_timeperiod(row: sqlite3.Row) -> TimePeriodStats:
 
 
 def insert_entry(entry: FuelEntryCreate) -> Optional[FuelEntryDB]:
-    """Insert a new fuel entry."""
+    """
+    Insert a new fuel entry into the database.
+
+    Args:
+        entry (FuelEntryCreate): Data for the new fuel entry.
+
+    Returns:
+        Optional[FuelEntryDB]: The created entry or None if insertion failed.
+    """
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute(
@@ -102,14 +132,31 @@ def insert_entry(entry: FuelEntryCreate) -> Optional[FuelEntryDB]:
 
 
 def read_entry(entry_id: int) -> Optional[FuelEntryDB]:
-    """Retrieve a single entry by ID."""
+    """
+    Retrieve a single fuel entry by ID.
+
+    Args:
+        entry_id (int): ID of the entry.
+
+    Returns:
+        Optional[FuelEntryDB]: The entry or None if not found.
+    """
     with get_db() as conn:
         row = conn.execute("SELECT * FROM fuel_entries WHERE id = ?", (entry_id,)).fetchone()
         return _row_to_fuel_entry_db(row) if row else None
 
 
 def update_entry(entry_id: int, entry: FuelEntryUpdate) -> Optional[FuelEntryDB]:
-    """Update an existing entry by ID."""
+    """
+    Update an existing fuel entry by ID.
+
+    Args:
+        entry_id (int): ID of the entry to update.
+        entry (FuelEntryUpdate): Updated entry data.
+
+    Returns:
+        Optional[FuelEntryDB]: The updated entry or None if not found.
+    """
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute(
@@ -128,7 +175,15 @@ def update_entry(entry_id: int, entry: FuelEntryUpdate) -> Optional[FuelEntryDB]
 
 
 def delete_entry(entry_id: int) -> bool:
-    """Delete an entry by ID."""
+    """
+    Delete a fuel entry by ID.
+
+    Args:
+        entry_id (int): ID of the entry to delete.
+
+    Returns:
+        bool: True if deleted, False otherwise.
+    """
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM fuel_entries WHERE id = ?", (entry_id,))
@@ -137,7 +192,16 @@ def delete_entry(entry_id: int) -> bool:
 
 
 def get_entries_raw(start_date: Optional[str] = None, end_date: Optional[str] = None) -> List[Dict[str, Any]]:
-    """Retrieve entries, optionally filtered by date range, as raw dicts."""
+    """
+    Retrieve entries as raw dicts, optionally filtered by date range.
+
+    Args:
+        start_date (Optional[str]): Start date filter.
+        end_date (Optional[str]): End date filter.
+
+    Returns:
+        List[Dict[str, Any]]: List of raw entry dictionaries.
+    """
     with get_db() as conn:
         query = "SELECT * FROM fuel_entries"
         params: List[Any] = []
@@ -156,19 +220,34 @@ def get_entries_raw(start_date: Optional[str] = None, end_date: Optional[str] = 
 
 
 def get_all_entries_raw() -> List[Dict[str, Any]]:
-    """Retrieve all entries as raw dicts."""
+    """
+    Retrieve all entries as raw dicts.
+
+    Returns:
+        List[Dict[str, Any]]: List of raw entry dictionaries.
+    """
     return get_entries_raw()
 
 
 def get_all_entries_processed() -> List[FuelEntryDB]:
-    """Retrieve all entries as FuelEntryDB objects."""
+    """
+    Retrieve all entries as FuelEntryDB objects.
+
+    Returns:
+        List[FuelEntryDB]: List of processed entries.
+    """
     with get_db() as conn:
         rows = conn.execute("SELECT * FROM fuel_entries ORDER BY date DESC").fetchall()
         return [_row_to_fuel_entry_db(row) for row in rows]
 
 
 def get_monthly_stats() -> List[TimePeriodStats]:
-    """Aggregate statistics by month."""
+    """
+    Aggregate statistics by month.
+
+    Returns:
+        List[TimePeriodStats]: Monthly aggregated statistics.
+    """
     with get_db() as conn:
         query = """
             SELECT strftime('%Y-%m', date) as period,
@@ -185,7 +264,12 @@ def get_monthly_stats() -> List[TimePeriodStats]:
 
 
 def get_yearly_stats() -> List[TimePeriodStats]:
-    """Aggregate statistics by year."""
+    """
+    Aggregate statistics by year.
+
+    Returns:
+        List[TimePeriodStats]: Yearly aggregated statistics.
+    """
     with get_db() as conn:
         query = """
             SELECT strftime('%Y', date) as period,
@@ -202,7 +286,16 @@ def get_yearly_stats() -> List[TimePeriodStats]:
 
 
 def get_custom_range_stats(start_date: str, end_date: str) -> TimePeriodStats:
-    """Aggregate statistics for a custom date range."""
+    """
+    Aggregate statistics for a custom date range.
+
+    Args:
+        start_date (str): Start date in YYYY-MM-DD format.
+        end_date (str): End date in YYYY-MM-DD format.
+
+    Returns:
+        TimePeriodStats: Aggregated statistics for the specified range.
+    """
     with get_db() as conn:
         query = """
             SELECT SUM(liters) as total_liters,
@@ -237,10 +330,15 @@ def get_custom_range_stats(start_date: str, end_date: str) -> TimePeriodStats:
             average_km_per_liter=round(avg_km_per_liter, 2),
             average_cost_per_liter=round(avg_cost_per_liter, 2),
         )
-    
+
 
 def delete_all_entries() -> bool:
-    """Delete ALL fuel entries and shrink the database file."""
+    """
+    Delete ALL fuel entries and shrink the database file.
+
+    Returns:
+        bool: True if purge succeeded, False otherwise.
+    """
     with get_db() as conn:
         try:
             cursor = conn.cursor()

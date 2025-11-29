@@ -1,4 +1,12 @@
 # app/api.py
+"""
+TankIQ API Module
+
+This module defines the FastAPI routes for CRUD operations,
+statistics retrieval, and CSV export of fuel entries.
+It handles request validation, error responses, and logging.
+"""
+
 import logging
 from typing import Optional
 
@@ -11,10 +19,10 @@ from app.models import (
     FuelEntryDB,
     EntryList,
     DetailedStats,
-    OverallStats,
+    OverallStats,  # Used indirectly inside EntryList and DetailedStats response models,
 )
 from app import database
-from app.utils import get_overall_stats, convert_entries_to_csv, get_best_efficiency
+from app.utils import get_overall_stats, convert_entries_to_csv
 from app.database import get_monthly_stats, get_yearly_stats
 
 logger = logging.getLogger(__name__)
@@ -24,7 +32,15 @@ router = APIRouter()
 
 @router.post("/entries/", response_model=FuelEntryDB, status_code=status.HTTP_201_CREATED)
 def create_fuel_entry(entry: FuelEntryCreate) -> FuelEntryDB:
-    """Create a new fuel entry in the database."""
+    """
+    Create a new fuel entry in the database.
+
+    Args:
+        entry (FuelEntryCreate): Data for the new fuel entry.
+
+    Returns:
+        FuelEntryDB: The created fuel entry record.
+    """
     logger.info("Received POST request to create entry.")
 
     db_entry = database.insert_entry(entry)
@@ -41,7 +57,15 @@ def create_fuel_entry(entry: FuelEntryCreate) -> FuelEntryDB:
 
 @router.get("/entries/{entry_id}", response_model=FuelEntryDB)
 def read_fuel_entry(entry_id: int) -> FuelEntryDB:
-    """Retrieve a single fuel entry by ID."""
+    """
+    Retrieve a single fuel entry by ID.
+
+    Args:
+        entry_id (int): The ID of the fuel entry.
+
+    Returns:
+        FuelEntryDB: The requested fuel entry record.
+    """
     logger.info("Received GET request for entry ID: %s", entry_id)
 
     db_entry = database.read_entry(entry_id)
@@ -55,7 +79,12 @@ def read_fuel_entry(entry_id: int) -> FuelEntryDB:
 
 @router.get("/entries/", response_model=EntryList)
 def list_entries_and_stats() -> EntryList:
-    """Retrieve all fuel entries and overall statistics."""
+    """
+    Retrieve all fuel entries and overall statistics.
+
+    Returns:
+        EntryList: List of processed entries and overall statistics.
+    """
     logger.info("Received GET request for all entries and statistics.")
 
     processed_entries = database.get_all_entries_processed()
@@ -86,7 +115,16 @@ def export_entries_csv(
     start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
 ) -> StreamingResponse:
-    """Export fuel entries as a CSV file, optionally filtered by date range."""
+    """
+    Export fuel entries as a CSV file, optionally filtered by date range.
+
+    Args:
+        start_date (Optional[str]): Start date filter in YYYY-MM-DD format.
+        end_date (Optional[str]): End date filter in YYYY-MM-DD format.
+
+    Returns:
+        StreamingResponse: CSV file containing fuel entries.
+    """
     logger.info(
         "Received GET request for CSV export. Filter: start=%s, end=%s",
         start_date,
@@ -114,7 +152,12 @@ def export_entries_csv(
 
 @router.get("/stats/", response_model=DetailedStats, tags=["Statistics"])
 def get_detailed_stats() -> DetailedStats:
-    """Retrieve overall, monthly, and yearly statistics."""
+    """
+    Retrieve overall, monthly, and yearly statistics.
+
+    Returns:
+        DetailedStats: Aggregated statistics including overall, monthly, and yearly data.
+    """
     logger.info("Received GET request for detailed statistical insights.")
 
     raw_entries = database.get_all_entries_raw()
@@ -140,10 +183,18 @@ def get_detailed_stats() -> DetailedStats:
     )
 
 
-
 @router.put("/entries/{entry_id}", response_model=FuelEntryDB)
 def update_fuel_entry(entry_id: int, entry: FuelEntryUpdate) -> FuelEntryDB:
-    """Update an existing fuel entry by ID."""
+    """
+    Update an existing fuel entry by ID.
+
+    Args:
+        entry_id (int): The ID of the fuel entry to update.
+        entry (FuelEntryUpdate): Updated data for the fuel entry.
+
+    Returns:
+        FuelEntryDB: The updated fuel entry record.
+    """
     logger.info("Received PUT request to update entry ID %s.", entry_id)
 
     db_entry = database.update_entry(entry_id, entry)
@@ -157,7 +208,15 @@ def update_fuel_entry(entry_id: int, entry: FuelEntryUpdate) -> FuelEntryDB:
 
 @router.delete("/entries/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_fuel_entry(entry_id: int) -> None:
-    """Delete a fuel entry by ID."""
+    """
+    Delete a fuel entry by ID.
+
+    Args:
+        entry_id (int): The ID of the fuel entry to delete.
+
+    Returns:
+        None
+    """
     logger.info("Received DELETE request for entry ID: %s", entry_id)
 
     success = database.delete_entry(entry_id)
@@ -168,9 +227,15 @@ def delete_fuel_entry(entry_id: int) -> None:
     logger.info("Successfully deleted entry ID: %s", entry_id)
     return None
 
+
 @router.delete("/entries/", status_code=status.HTTP_204_NO_CONTENT, tags=["Maintenance"])
 def purge_all_entries() -> None:
-    """Delete ALL fuel entries and vacuum the database."""
+    """
+    Delete ALL fuel entries and vacuum the database.
+
+    Returns:
+        None
+    """
     logger.warning("Received DELETE request to purge ALL entries.")
 
     success = database.delete_all_entries()
