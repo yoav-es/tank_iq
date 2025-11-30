@@ -1,161 +1,271 @@
-# 🚗 TankIQ – Fuel Logging System
+# TankIQ – Fuel Logging System
 
-TankIQ provides a **simple and reliable system for fuel logging**.  
+TankIQ provides a simple and reliable system for fuel logging.  
 It helps track fuel usage, costs, and efficiency over time, making record‑keeping and analysis straightforward.
 
 This project follows:
-- **Airbnb JavaScript Style Guide** for TypeScript
-- **PEP8** for Python
+- Airbnb JavaScript Style Guide for TypeScript
+- PEP8 for Python
 
 ---
 
-## 📂 Project Structure
+## Project structure – TankIQ
 
-# 📂 Project Structure – TankIQ
+TankIQ/  
+&nbsp;&nbsp;app/                         # Core backend application logic  
+&nbsp;&nbsp;&nbsp;&nbsp;__init__.py                # Initializes the app package  
+&nbsp;&nbsp;&nbsp;&nbsp;models.py                  # Pydantic schemas for entries and statistics  
+&nbsp;&nbsp;&nbsp;&nbsp;database.py                # SQLite connection, schema initialization, CRUD operations  
+&nbsp;&nbsp;&nbsp;&nbsp;api.py                     # FastAPI router (CRUD, stats, CSV export)  
+&nbsp;&nbsp;&nbsp;&nbsp;server.py                  # FastAPI app init, logging, lifespan, CORS middleware  
+&nbsp;&nbsp;&nbsp;&nbsp;utils.py                   # Calculations, statistics, CSV conversion  
 
-- TankIQ/
-  - app/                         # Core application logic
-      - __init__.py              # Initializes the app package
-      - models.py                # Defines Pydantic schemas for entries and statistics
-      - database.py              # Manages SQLite connection, schema initialization, and CRUD operations
-      - api.py                   # FastAPI router with CRUD endpoints, stats, and CSV export
-      - server.py                # FastAPI app initialization, logging, lifespan events, and CORS middleware
-      - utils.py                 # Helper functions for calculations, statistics, and CSV conversion
-  - `tests/`                      # Unit, integration, and functional tests
-    - `test_utils.py`             # Unit tests for utility functions
-    - `test_models.py`            # Validation and schema tests for Pydantic models
-    - `test_database.py`          # Integration tests for SQLite database operations
-    - `test_api.py`               # Functional tests for FastAPI endpoints (CRUD, stats, export)  - ui/                          # Vue 3 frontend
-    - src/
-      - router/
-        - index.ts               # Vue Router setup
-      - services/
-        - api-services.ts        # API service layer
-      - stores/
-        - fuel-store.ts          # Pinia store for fuel entries
-        - layout-store.ts        # Pinia store for layout state
-      - types/
-        - fuelEntry.ts           # TypeScript type definitions
-      - views/
-        - dashboard-view.vue
-        - log-view.vue
-        - stats-view.vue
-      - App.vue
-      - main.css
-      - main.ts
-    - index.html
-    - package-lock.json
-    - package.json
-    - tsconfig.json
-    - vite.config.json
-  - fuel_log.db                  # SQLite database
-  - main.py                      # Entry point to run the FastAPI app
-  - requirements.txt             # Python dependencies
-  - pyproject.toml               # Python project metadata
-  - Dockerfile                   # Containerization
-  - Makefile                     # Build/test automation
-  - package-lock.json
-  - package.json
-  - README.md                    # Project overview and instructions
+&nbsp;&nbsp;tests/                       # Unit, integration, and functional tests  
+&nbsp;&nbsp;&nbsp;&nbsp;test_utils.py              # Utility function tests  
+&nbsp;&nbsp;&nbsp;&nbsp;test_models.py             # Pydantic schema validation tests  
+&nbsp;&nbsp;&nbsp;&nbsp;test_database.py           # SQLite DB initialization and operations  
+&nbsp;&nbsp;&nbsp;&nbsp;test_api.py                # FastAPI endpoints: CRUD, stats, export  
+
+&nbsp;&nbsp;ui/                          # Vue 3 frontend  
+&nbsp;&nbsp;&nbsp;&nbsp;src/  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;assets/                  # Static images, icons, styles  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;components/              # Reusable Vue components  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ChartCard.vue          # Chart wrapper  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SummaryBlock.vue       # Summary stats display  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;InsightBlock.vue       # Efficiency/distance insights  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;composables/             # Reusable logic (Vue composables)  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;useChart.ts            # Chart.js helpers (labels, datasets, options, init/update)  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;useStats.ts            # Stats helpers (insights, summary, labels)  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;useFormat.ts           # Formatting utilities (currency, dates)  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;stores/                  # Pinia stores  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fuelStore.ts           # Fuel entries, stats, persistence  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;types/                   # TypeScript interfaces/types  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FuelEntry.ts           # DetailedStats, FuelEntry, Stat types  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;views/                   # Page-level components  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DashboardView.vue      # Overview charts (monthly/yearly aggregates)  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;StatsView.vue          # Detailed stats (yearly/monthly + histogram)  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;router/                  # Vue Router setup  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;index.ts  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;App.vue                  # Root component  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;main.ts                  # App entry point  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;style.css                # Global styles  
+&nbsp;&nbsp;&nbsp;&nbsp;package.json  
+&nbsp;&nbsp;&nbsp;&nbsp;tsconfig.json  
+&nbsp;&nbsp;&nbsp;&nbsp;vite.config.ts  
+
+&nbsp;&nbsp;fuel_log.db                  # SQLite database  
+&nbsp;&nbsp;main.py                      # Entry point to run the FastAPI app  
+&nbsp;&nbsp;requirements.txt             # Python dependencies  
+&nbsp;&nbsp;pyproject.toml               # Python project metadata  
+&nbsp;&nbsp;Dockerfile                   # Containerization  
+&nbsp;&nbsp;Makefile                     # Build/test automation  
+&nbsp;&nbsp;package.json                 # Project metadata  
+&nbsp;&nbsp;package-lock.json  
+&nbsp;&nbsp;README.md                    # Project overview and instructions  
+
+---
+
+## Backend summary
+
+### Core features
+- Fuel entry management: CRUD operations via FastAPI routes.
+- Statistics endpoint (/stats/): overall, monthly, and yearly fuel efficiency (km/L) and total cost.
+- Metric consistency: system standardized to km/L (removed L/100km).
+- Aggregated statistics: supports calculations for specific time periods.
+- CSV export (/entries/export/): download entries with optional date range filters.
+
+### Stability & reliability
+- Error handling: fixed runtime errors (500s, validation errors, floating‑point issues).
+- Import fix: corrected ImportError in app/server.py with explicit imports.
+- Testing: comprehensive coverage across backend modules.
 
 ---
 
-## ⚙️ Backend Summary
+## Tests
 
-### Core Features
-- **Fuel Entry Management:** CRUD operations via FastAPI routes.
-- **Statistics Endpoint (`/stats/`):** Returns overall, monthly, and yearly fuel efficiency statistics in **km/L** and total cost.
-- **Metric Consistency:** Entire system standardized to **km/L** (removed old L/100km metric).
-- **Aggregated Statistics:** Supports calculations for specific time periods.
-- **CSV Export (`/entries/export/`):** Download entries as CSV, with optional date range filters.
-
-### Stability & Reliability
-- **Error Handling:** Fixed runtime errors (500s, validation errors, floating‑point issues).
-- **Import Fix:** Corrected `ImportError` in `app/server.py` with explicit imports.
-- **Testing:** Comprehensive coverage across all backend modules.
+- Unit tests (utils): calculate_entry_stats, get_overall_stats, get_best_efficiency, convert_entries_to_csv (includes empty input edge cases).
+- Model tests (models): date format and non‑negative validators; schemas exercised (FuelEntryBase, FuelEntryDB, OverallStats, TimePeriodStats, DetailedStats, EntryList).
+- Database tests (database.py): initialization, connection handling, delete_all_entries for populated and empty tables.
+- API tests (api.py): FastAPI TestClient for CRUD (/entries/), stats (/stats/), and exports (/entries/export/) including empty DB and date‑filtered cases.
 
 ---
-## 🧪 Tests
 
-The backend is fully covered by automated tests:
-
-- **Unit Tests (utils):**  
-  Validate calculation helpers (`calculate_entry_stats`, `get_overall_stats`, `get_best_efficiency`, `convert_entries_to_csv`) including edge cases like empty input.
-
-- **Model Tests (models):**  
-  Ensure Pydantic validators enforce correct date formats and non‑negative values. All schemas (`FuelEntryBase`, `FuelEntryDB`, `OverallStats`, `TimePeriodStats`, `DetailedStats`, `EntryList`) are exercised.
-
-- **Database Tests (database.py):**  
-  Cover initialization, connection handling, and deletion logic (`delete_all_entries`) with both populated and empty tables.
-
-- **API Tests (api.py):**  
-  Functional tests using FastAPI’s `TestClient`:
-  - CRUD endpoints (`/entries/`)  
-  - Statistics endpoint (`/stats/`)  
-  - Export endpoint (`/entries/export/`) including empty DB and date‑filtered exports  
----
-
-## 🎨 Frontend Summary
+## Frontend summary
 
 ### Technology
-- **Framework:** Vue 3 (Composition API, `<script setup>`)
-- **Routing:** Vue Router
-- **State Management:** Pinia
-- **UI Library:** Naive UI
-- **Styling:** Custom CSS + CSS Grid
-- **Build Tool:** Vite
+- Framework: Vue 3 (Composition API, <script setup>)
+- Routing: Vue Router
+- State management: Pinia
+- UI library: Naive UI
+- Styling: Custom CSS + CSS Grid
+- Build tool: Vite
 
-### Layout & Styling
-- **Sidebar:** Fixed/sticky, responsive width, styled hover/active states.
-- **Main Area:** Unified background color, flush alignment with sidebar, subtle header separation.
-- **Grid Layout:** Sidebar + main aligned in one grid row, responsive stacking on narrow screens.
-- **File Organization:** Styles centralized in `main.css`, slimmed `App.vue`.
-
-### Headline Consistency (Work Done Today)
-- Unified **headline structure** across `dashboard-view`, `log-view`, and `stats-view`.
-- Removed old `report__header` block from stats view.
-- Eliminated extra spacing by aligning separator margins.
-- Introduced a **shared headline style** for consistency across modules.
+### Layout & styling
+- Sidebar: fixed/sticky, responsive width, styled hover/active states.
+- Main area: unified background color, flush alignment with sidebar, subtle header separation.
+- Grid layout: sidebar + main in one grid row, responsive stacking on narrow screens.
+- File organization: styles centralized in main.css; slimmed App.vue.
 
 ---
 
-## 🛠️ Improvement Roadmap
+## Statistics behavior
 
-### ✅ Current Status
-- **Dashboard:** Stable  
-- **Log:** Stable  
-- **Stats:** Headline unified, spacing fixed  
-
-### 🔧 Next Improvements
-1. **Statistics**
-   - Fix efficiency graph orientation (respect locale).
-   - Ensure monthly/yearly filters allow specific selection.
-2. **Currency Configuration**
-   - Add configurable currency option (`--currency=USD` or via settings).
-3. **Summary Table**
-   - Show monthly totals (liters, cost, distance).
-   - Insights follow summary.
-4. **Export & Purge**
-   - Export data (CSV/JSON).
-   - Purge/reset database option.
-5. **Dark Mode**
-   - Add theme toggle.
-6. **Deployment**
-   - Docker image for deployment.
-   - Makefile for build/test automation.
+- Yearly charts: use monthly_stats aggregates for the selected year, sorted chronologically (old → new).
+- Monthly charts: use raw store.entries within the selected month, sorted chronologically (old → new).
+- Histogram: global efficiency distribution.
+- Chart options: use buildOptions('month' | 'year') consistently.
 
 ---
 
-## 📝 Work Session Summary
+## Improvement roadmap
 
-- **Frontend:**  
-  - Unified headline styles across all views.  
-  - Removed unused `report__header` styles.  
-  - Fixed spacing issues in stats view.  
+### Current status
+- Dashboard: stable
+- Log: stable
+- Stats: headline unified, spacing fixed, logic corrected
 
-- **Backend:**  
-  - Stable API with consistent km/L metric.  
-  - Comprehensive test coverage.  
 
-- **Roadmap:**  
-  - Focus on statistics visualization, filters, currency config, and deployment packaging.
+## How It Works
+
+### 1. Input Files
+- **Frontend Dockerfile**: Builds the UI using Node.js, then serves it with Nginx.
+- **Backend Dockerfile**: Builds and runs the FastAPI backend with Python.
+- **nginx.conf**: Configures Nginx to handle frontend routing correctly.
+- **docker-compose.yml**: Defines how frontend and backend containers run together.
+- **Makefile**: Provides shortcuts for Docker Compose lifecycle management.
+
+### 2. Execution Flow
+- Dockerfiles define how each service is built and run.
+- `docker-compose.yml` orchestrates both services together.
+- The Makefile provides simple commands (`make build`, `make up`, `make down`, etc.) to manage containers.
+- Developers can rebuild, restart, clean, or view logs without typing long Docker commands.
+
+### 3. CLI Interface
+- With `make` installed, you can run:
+  
+      make build
+      make up
+      make down
+      make logs
+      make frontend
+      make backend
+      make restart
+      make clean
+
+- Without `make`, use equivalent Docker Compose commands:
+
+      docker compose build
+      docker compose up -d
+      docker compose down
+      docker compose logs -f
+
+---
+
+## Docker Usage
+
+To build and run the services directly with Docker Compose:
+
+    docker compose build
+    docker compose up -d
+
+To stop and remove containers:
+
+    docker compose down
+
+To rebuild everything from scratch:
+
+    docker compose down
+    docker compose build --no-cache
+    docker compose up -d
+
+To clean containers, images, and volumes:
+
+    docker compose down --volumes --remove-orphans
+    docker system prune -af
+
+---
+
+## Makefile Usage
+
+The Makefile simplifies common tasks. Ensure you have `make` installed (Linux/macOS usually include it; on Windows install via Chocolatey, Git Bash with MSYS2, or WSL).
+
+To build images:
+
+    make build
+
+To start containers:
+
+    make up
+
+To stop containers:
+
+    make down
+
+To view logs:
+
+    make logs
+
+To view frontend logs:
+
+    make frontend
+
+To view backend logs:
+
+    make backend
+
+To restart everything:
+
+    make restart
+
+To clean containers, images, and volumes:
+
+    make clean
+
+---
+
+## Local Development
+
+If you prefer not to use Docker, you can run the backend locally with Python and the frontend with Node.js.
+
+### Backend
+1. Create a virtual environment:
+
+       python3 -m venv venv
+
+2. Activate the environment:
+
+   - On macOS/Linux:
+
+         source venv/bin/activate
+
+   - On Windows:
+
+         venv\Scripts\activate
+
+3. Install dependencies:
+
+       pip install -r requirements.txt
+
+4. Run the FastAPI app:
+
+       uvicorn main:app --reload
+
+### Frontend
+1. Navigate to the `ui/` directory.
+2. Install dependencies:
+
+       npm install
+
+3. Run the development server:
+
+       npm run dev
+
+---
+
+## Summary
+- **Dockerfiles** define how to build and run frontend and backend services.
+- **nginx.conf** ensures frontend routing works.
+- **docker-compose.yml** orchestrates both services.
+- **Makefile** provides shortcuts for building, running, restarting, and cleaning containers.
+- You can run everything with Docker Compose or locally with Python and Node.js.
+

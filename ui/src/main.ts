@@ -4,7 +4,7 @@ import { createPinia } from 'pinia';
 import naive from 'naive-ui';
 import App from './App.vue';
 import router from './router';
-import { useLayoutStore } from './stores/layout-store';
+import { useLayoutStore } from './stores/layoutStore';
 import './main.css';
 
 // 🔑 Chart.js v4 registration

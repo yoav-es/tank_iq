@@ -3,17 +3,127 @@ import { Chart as ChartJS } from 'chart.js/auto';
 import type { ChartOptions, ChartType, ChartData } from 'chart.js';
 import { markRaw } from 'vue';
 
-// >>> ADDED for dashboard
+/**
+ * Supported modes for statistics visualization.
+ * - 'month': monthly stats
+ * - 'year': yearly stats
+ */
 export type Mode = 'month' | 'year';
 
 /**
- * Build chart options with dynamic labels and title.
+ * Statistics entry structure (expanded for StatsView needs).
  */
-export function chartOptionsWithUnit(yLabel: string, title: string): ChartOptions {
+export interface Stat {
+  period_label: string;           // e.g. "2025-11" or "2025"
+  average_km_per_liter?: number;  // efficiency
+  total_cost?: number;            // aggregated cost per period
+  total_distance?: number;        // aggregated distance per period
+}
+
+/**
+ * Data source interface for statistics.
+ */
+export interface StatsDataSource {
+  monthly_stats?: Stat[];
+  yearly_stats?: Stat[];
+}
+
+/**
+ * Check if stats exist for a given mode.
+ */
+export function hasStats(ds: StatsDataSource | null, mode: Mode): boolean {
+  if (!ds) return false;
+  const list = mode === 'month' ? ds.monthly_stats : ds.yearly_stats;
+  return !!(list && list.length > 0);
+}
+
+/**
+ * Extract statistics list from data source, sorted by period label.
+ */
+export function getStats(ds: StatsDataSource | null, mode: Mode): Stat[] {
+  if (!ds) return [];
+  const list: Stat[] =
+    mode === 'month' ? [...(ds.monthly_stats ?? [])] : [...(ds.yearly_stats ?? [])];
+  if (!list.length) return [];
+  list.sort((a, b) => String(a.period_label).localeCompare(String(b.period_label)));
+  return list;
+}
+
+/**
+ * Build labels for chart based on mode.
+ * - Month mode: "MM/YYYY"
+ * - Year mode: "YYYY"
+ */
+export function getLabels(mode: Mode, stats: Stat[]): string[] {
+  return stats.map((s) =>
+    mode === 'month'
+      ? `${String(s.period_label).split('-')[1]}/${String(s.period_label).split('-')[0]}`
+      : String(s.period_label)
+  );
+}
+
+/**
+ * Extract numeric efficiency data from statistics (km/L).
+ */
+export function getData(stats: Stat[]): number[] {
+  return stats.map((s) => Number(s.average_km_per_liter ?? 0));
+}
+
+/**
+ * Extract numeric cost data from statistics.
+ */
+export function getCostData(stats: Stat[]): number[] {
+  return stats.map((s) => Number(s.total_cost ?? 0));
+}
+
+/**
+ * Extract numeric distance data from statistics.
+ */
+export function getDistanceData(stats: Stat[]): number[] {
+  return stats.map((s) => Number(s.total_distance ?? 0));
+}
+
+/**
+ * Build a dataset for bar or line charts.
+ * - Line charts include a shaded area under the line.
+ */
+export function buildDataset(
+  type: 'bar' | 'line',
+  data: number[],
+  color: string
+): ChartData<'bar' | 'line'>['datasets'][0] {
+  return type === 'bar'
+    ? { data, backgroundColor: color }
+    : {
+        data,
+        borderColor: color,
+        backgroundColor: 'rgba(16, 185, 129, 0.2)', // shaded area under line
+        tension: 0.3,
+        fill: true
+      };
+}
+
+/**
+ * Utility: compare two arrays for changes.
+ */
+export function arraysChanged<T>(a: T[], b: T[]): boolean {
+  if (a.length !== b.length) return true;
+  return a.some((val, i) => val !== b[i]);
+}
+
+/**
+ * Build chart options with dynamic labels and title.
+ * Unified styling for both Dashboard and Stats views using CSS variables.
+ */
+export function buildOptions(
+  mode: Mode | null,
+  yLabel: string,
+  title: string
+): ChartOptions {
   return {
     responsive: true,
-    animation: false,
     maintainAspectRatio: false,
+    animation: { duration: 300 },
     plugins: {
       legend: { display: false },
       title: {
@@ -24,35 +134,31 @@ export function chartOptionsWithUnit(yLabel: string, title: string): ChartOption
       }
     },
     scales: {
-      x: { title: { display: true, text: 'Period', color: 'var(--color-text)' } },
-      y: { title: { display: true, text: yLabel, color: 'var(--color-text)' } }
+      x: {
+        title: {
+          display: true,
+          text: mode === 'month' ? 'Month' : mode === 'year' ? 'Year' : 'Period',
+          color: 'var(--color-text)'
+        },
+        ticks: { color: 'var(--color-text)' },
+        grid: { color: 'var(--color-muted)' }
+      },
+      y: {
+        title: { display: true, text: yLabel, color: 'var(--color-text)' },
+        ticks: { color: 'var(--color-text)' },
+        grid: { color: 'var(--color-muted)' }
+      }
     }
   };
 }
 
 /**
- * Compare two arrays for changes.
- */
-export function arraysChanged<T>(a: T[], b: T[]): boolean {
-  if (a.length !== b.length) return true;
-  return a.some((val, i) => val !== b[i]);
-}
-
-/**
- * Build a dataset for bar or line charts.
- */
-export function buildDataset(
-  type: 'bar' | 'line',
-  data: number[],
-  color: string
-) {
-  return type === 'bar'
-    ? { data, backgroundColor: color }
-    : { data, borderColor: color, tension: 0.3, fill: false };
-}
-
-/**
- * Initialize or update a chart instance.
+ * Generic initializer/updater for charts.
+ * Works for both DashboardView and StatsView.
+ *
+ * - Creates a new ChartJS instance if none exists.
+ * - Updates labels/data/options if they changed.
+ * - Safely re-binds to a different canvas if needed.
  */
 export function initOrUpdateChart(
   chart: ChartJS | null,
@@ -60,63 +166,58 @@ export function initOrUpdateChart(
   type: ChartType,
   labels: string[],
   data: number[],
-  dataset: any,
+  dataset: ChartData<'bar' | 'line'>['datasets'][0],
   options: ChartOptions
 ): ChartJS | null {
   if (!canvas) return chart;
 
-  // If we had a chart, but the canvas element was replaced (v-if toggle),
-  // destroy the old chart and start fresh on the new canvas.
+  // If chart exists but is bound to a different canvas, destroy before re-creating
   if (chart && (chart as any).canvas && (chart as any).canvas !== canvas) {
     chart.destroy();
     chart = null;
   }
 
+  // Create chart if missing
   if (!chart) {
-    return new ChartJS(canvas, { type, data: { labels, datasets: [dataset] }, options });
-  } else {
-    const needUpdate =
-      arraysChanged(chart.data.labels as string[], labels) ||
-      arraysChanged(chart.data.datasets[0].data as number[], data);
-
-    if (needUpdate) {
-      chart.data.labels = labels;
-      chart.data.datasets[0].data = data;
-      chart.options = options;
-      chart.update();
-    }
-    return chart;
+    return markRaw(
+      new ChartJS(canvas, { type, data: { labels, datasets: [dataset] }, options })
+    );
   }
+
+  // Update chart if labels or data changed
+  const needUpdate =
+    arraysChanged(chart.data.labels as string[], labels) ||
+    arraysChanged(chart.data.datasets[0].data as number[], data);
+
+  if (needUpdate) {
+    chart.data.labels = labels;
+    chart.data.datasets[0].data = data;
+    chart.options = options;
+    chart.update();
+  }
+
+  return chart;
 }
 
 /**
- * Destroy all chart instances and reset refs.
+ * Compute histogram bins for fuel efficiency values.
+ * - Bins are 2 km/L wide for readability.
+ * - Returns empty arrays if no valid data.
  */
-export function resetCharts(charts?: any[]) {
-  if (!charts) return;
-  charts.forEach(c => {
-    if (c && typeof c.destroy === 'function') {
-      c.destroy();
-    }
-  });
-}
-
-/**
- * Histogram binning logic
- */
-export function computeEfficiencyHistogramBins(entries: any[]): { labels: string[]; counts: number[] } {
-  if (!entries?.length) return { labels: ['No data'], counts: [0] };
+export function computeEfficiencyHistogramBins(
+  entries: { distance?: number; liters?: number }[]
+): { labels: string[]; counts: number[] } {
+  if (!entries?.length) return { labels: [], counts: [] };
 
   const efficiencies = entries
     .filter(e => e.distance && e.liters)
-    .map(e => e.distance / e.liters);
+    .map(e => e.distance! / e.liters!);
 
-  if (!efficiencies.length) return { labels: ['No data'], counts: [0] };
+  if (!efficiencies.length) return { labels: [], counts: [] };
 
   let minEff = Math.floor(Math.min(...efficiencies) / 2) * 2;
   let maxEff = Math.ceil(Math.max(...efficiencies) / 2) * 2;
 
-  // Ensure at least one bin
   if (minEff === maxEff) {
     maxEff = minEff + 2;
   }
@@ -129,31 +230,38 @@ export function computeEfficiencyHistogramBins(entries: any[]): { labels: string
     counts.push(efficiencies.filter(v => v >= b && v < b + 2).length);
   }
 
-  // fallback if all bins are zero
+  // If all bins are zero, avoid rendering an empty chart
   if (counts.every(c => c === 0)) {
-    return { labels: ['No data'], counts: [0] };
+    return { labels: [], counts: [] };
   }
 
   return { labels, counts };
 }
 
 /**
- * Build global efficiency histogram chart
+ * Build or update global efficiency histogram chart.
+ * - Destroys chart if no data is available.
+ * - Uses unified styling via buildOptions.
  */
 export function buildGlobalEfficiencyHistogram(
   chart: ChartJS | null,
   canvas: HTMLCanvasElement | null,
-  entries: any[]
+  entries: { distance?: number; liters?: number }[]
 ): ChartJS | null {
   if (!canvas) return chart;
 
   const { labels, counts } = computeEfficiencyHistogramBins(entries);
 
+  if (!labels.length || !counts.length) {
+    if (chart) chart.destroy();
+    return null;
+  }
+
   if (!chart) {
     return new ChartJS(canvas, {
       type: 'bar',
       data: { labels, datasets: [{ data: counts, backgroundColor: '#607D8B' }] },
-      options: chartOptionsWithUnit('Count', 'Fuel Efficiency Distribution')
+      options: buildOptions(null, 'Count', 'Fuel Efficiency Distribution')
     });
   } else {
     const needUpdate =
@@ -168,91 +276,12 @@ export function buildGlobalEfficiencyHistogram(
   }
 }
 
-// >>> ADDED for dashboard
-export function getStats(ds: any, mode: Mode) {
-  const list: any[] =
-    mode === 'month' ? [...(ds?.monthly_stats ?? [])] : [...(ds?.yearly_stats ?? [])];
-  list.sort((a, b) => String(a.period_label).localeCompare(String(b.period_label)));
-  return list;
-}
-
-export function getLabels(mode: Mode, stats: any[]): string[] {
-  return stats.map((s) =>
-    mode === 'month'
-      ? `${String(s.period_label).split('-')[1]}/${String(s.period_label).split('-')[0]}`
-      : String(s.period_label)
-  );
-}
-
-export function getData(stats: any[]): number[] {
-  return stats.map((s) => Number(s.average_km_per_liter ?? 0));
-}
-
-export function buildDashboardOptions(mode: Mode): ChartOptions<'line'> {
-  return {
-    responsive: true,
-    maintainAspectRatio: false,
-    layout: { padding: { bottom: 10 } },
-    animation: { duration: 300 },
-    plugins: { legend: { display: false } },
-    scales: {
-      x: {
-        title: {
-          display: true,
-          text: mode === 'month' ? 'Month' : 'Year',
-          color: '#f1f5f9',
-        },
-        ticks: { color: '#f1f5f9' },
-      },
-      y: {
-        title: {
-          display: true,
-          text: 'Efficiency (km/L)',
-          color: '#f1f5f9',
-        },
-        ticks: { color: '#f1f5f9' },
-      },
-    },
-  };
-}
-
-export function initDashboardChart(
-  canvas: HTMLCanvasElement,
-  mode: Mode,
-  stats: any[]
-): ChartJS<'line'> {
-  const labels = getLabels(mode, stats);
-  const dataset = getData(stats);
-
-  const data: ChartData<'line'> = {
-    labels,
-    datasets: [
-      {
-        label: `Average Efficiency (${mode}) [km/L]`,
-        data: dataset,
-        borderColor:
-          getComputedStyle(document.documentElement).getPropertyValue('--color-secondary').trim() ||
-          '#10B981',
-        backgroundColor: 'rgba(16, 185, 129, 0.2)',
-        fill: true,
-        tension: 0.3,
-      },
-    ],
-  };
-
-  return markRaw(
-    new ChartJS<'line'>(canvas.getContext('2d')!, {
-      type: 'line',
-      data,
-      options: buildDashboardOptions(mode),
-    })
-  );
-}
-
-export function updateDashboardChart(chart: ChartJS<'line'>, mode: Mode, stats: any[]) {
-  chart.data.labels = getLabels(mode, stats);
-  chart.data.datasets[0].label = `Average Efficiency (${mode}) [km/L]`;
-  chart.data.datasets[0].data = getData(stats);
-  chart.options = buildDashboardOptions(mode);
-  chart.update();
+/**
+ * Reset multiple charts safely.
+ * - Destroys chart instances without throwing if null.
+ */
+export function resetCharts(charts: (ChartJS | null)[]) {
+  charts.forEach(c => {
+    if (c) c.destroy();
+  });
 }

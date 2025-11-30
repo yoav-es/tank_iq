@@ -4,15 +4,22 @@ import {
   FuelEntryInput,
   EntryListResponse,
   DetailedStats,
-} from '../types/fuel-entry'; // make sure the filename matches exactly
+} from '../types/FuelEntry';
 
-const BASE_URL = 'http://localhost:8000';
+/**
+ * Base URL for API requests.
+ * Should be configured via environment variable for flexibility.
+ */
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
-// CHANGE: keep controllers per endpoint to cancel overlapping requests
-let entriesController: AbortController | null = null;   // CHANGE: new
-let statsController: AbortController | null = null;     // CHANGE: new
-
-const handleResponse = async <T>(response: Response): Promise<T> => {
+/**
+ * Handle API responses consistently.
+ *
+ * @param response - Fetch API response object
+ * @returns Parsed JSON body of type T
+ * @throws Error if response is not ok
+ */
+const handleJsonResponse = async <T>(response: Response): Promise<T> => {
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({ detail: 'Unknown API error' }));
     throw new Error(errorBody.detail || response.statusText);
@@ -20,62 +27,95 @@ const handleResponse = async <T>(response: Response): Promise<T> => {
   return response.json() as Promise<T>;
 };
 
+/**
+ * Handle text responses (e.g. CSV export).
+ *
+ * @param response - Fetch API response object
+ * @returns Response body as plain text
+ * @throws Error if response is not ok
+ */
+const handleTextResponse = async (response: Response): Promise<string> => {
+  if (!response.ok) {
+    const errorBody = await response.text().catch(() => 'Unknown API error');
+    throw new Error(errorBody || response.statusText);
+  }
+  return response.text();
+};
+
+/**
+ * Create a new fuel entry.
+ */
 export const createEntry = async (entry: FuelEntryInput): Promise<FuelEntryDB> => {
   const response = await fetch(`${BASE_URL}/entries/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(entry),
   });
-  return handleResponse<FuelEntryDB>(response);
+  return handleJsonResponse<FuelEntryDB>(response);
 };
 
-export const getEntries = async (): Promise<EntryListResponse> => {
-  // CHANGE: cancel previous request if still running
-  if (entriesController) entriesController.abort();      // CHANGE
-  entriesController = new AbortController();             // CHANGE
-
+/**
+ * Fetch all fuel entries.
+ * Each call uses its own AbortController to prevent overlap.
+ */
+export const getEntries = async (signal?: AbortSignal): Promise<EntryListResponse> => {
+  const controller = new AbortController();
   const response = await fetch(`${BASE_URL}/entries/`, {
-    signal: entriesController.signal,                    // CHANGE
+    signal: signal ?? controller.signal,
   });
-  return handleResponse<EntryListResponse>(response);
+  return handleJsonResponse<EntryListResponse>(response);
 };
 
+/**
+ * Update an existing fuel entry.
+ */
 export const updateEntry = async (id: number, entry: FuelEntryInput): Promise<FuelEntryDB> => {
   const response = await fetch(`${BASE_URL}/entries/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(entry),
   });
-  return handleResponse<FuelEntryDB>(response);
+  return handleJsonResponse<FuelEntryDB>(response);
 };
 
+/**
+ * Delete a fuel entry by ID.
+ */
 export const deleteEntry = async (id: number): Promise<void> => {
   const response = await fetch(`${BASE_URL}/entries/${id}`, { method: 'DELETE' });
   if (!response.ok) {
-    throw new Error(`Failed to delete entry ${id}. Status: ${response.status}`);
+    const errorBody = await response.json().catch(() => ({ detail: 'Unknown API error' }));
+    throw new Error(errorBody.detail || `Failed to delete entry ${id}. Status: ${response.status}`);
   }
 };
 
-export const getDetailedStats = async (): Promise<DetailedStats> => {
-  // CHANGE: cancel previous stats request if still running
-  if (statsController) statsController.abort();          // CHANGE
-  statsController = new AbortController();               // CHANGE
-
+/**
+ * Fetch detailed statistics.
+ * Each call uses its own AbortController to prevent overlap.
+ */
+export const getDetailedStats = async (signal?: AbortSignal): Promise<DetailedStats> => {
+  const controller = new AbortController();
   const response = await fetch(`${BASE_URL}/stats/`, {
-    signal: statsController.signal,                      // CHANGE
+    signal: signal ?? controller.signal,
   });
-  return handleResponse<DetailedStats>(response);
+  return handleJsonResponse<DetailedStats>(response);
 };
 
-// api-service.ts
+/**
+ * Purge all fuel entries.
+ */
 export async function purgeEntries(): Promise<void> {
-  const res = await fetch(`${BASE_URL}/entries/`, { method: 'DELETE' }); // use BASE_URL
-  if (!res.ok) throw new Error('Failed to purge entries');
+  const response = await fetch(`${BASE_URL}/entries/`, { method: 'DELETE' });
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({ detail: 'Unknown API error' }));
+    throw new Error(errorBody.detail || 'Failed to purge entries');
+  }
 }
 
+/**
+ * Export all fuel entries as CSV.
+ */
 export async function exportEntriesCsv(): Promise<string> {
-  const res = await fetch(`${BASE_URL}/entries/export`, { method: 'GET' }); // use BASE_URL
-  if (!res.ok) throw new Error('Failed to export CSV');
-  return await res.text();
+  const response = await fetch(`${BASE_URL}/entries/export`, { method: 'GET' });
+  return handleTextResponse(response);
 }
-

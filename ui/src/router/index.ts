@@ -1,15 +1,19 @@
-//ui/src/router/index
+// ui/src/router/index.ts
 import { createRouter, createWebHistory } from 'vue-router';
 import type { RouteRecordRaw } from 'vue-router';
 
-import DashboardView from '../views/dashboard-view.vue';
-import StatsView from '../views/stats-view.vue';
-import LogView from '../views/log-view.vue';
+import DashboardView from '../views/DashboardView.vue';
+import StatsView from '../views/StatsView.vue';
+import LogView from '../views/LogView.vue';
 
+/**
+ * Application routes definition.
+ * Each route maps a path to a view component.
+ */
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    redirect: '/dashboard',
+    redirect: '/dashboard', // default redirect
   },
   {
     path: '/dashboard',
@@ -28,10 +32,14 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/:pathMatch(.*)*',
-    redirect: '/dashboard',
+    redirect: '/dashboard', // catch-all fallback
   },
 ];
 
+/**
+ * Create and export Vue Router instance.
+ * Uses HTML5 history mode for clean URLs.
+ */
 export default createRouter({
   history: createWebHistory(),
   routes,

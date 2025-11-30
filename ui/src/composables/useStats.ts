@@ -1,11 +1,15 @@
 // ui/src/composables/useStats.ts
-import { computed } from 'vue';
-import type { DetailedStats } from '../types/fuel-entry';
-import { useFuelStore } from '../stores/fuel-store';
+import { computed, Ref } from 'vue';
+import type { DetailedStats, FuelEntryDB } from '../types/FuelEntry';
+import { useFuelStore } from '../stores/fuelStore';
 import { formatCurrency } from '../utils/format';
 
 /**
- * Insight helpers (stats-specific)
+ * Provide insight into fuel efficiency compared to average.
+ *
+ * @param value - Current efficiency value
+ * @param avg - Average efficiency value
+ * @returns Textual insight string
  */
 export function efficiencyInsight(value: number, avg: number): string {
   if (value > avg * 1.1) return 'fuel consumption was higher than usual';
@@ -13,6 +17,13 @@ export function efficiencyInsight(value: number, avg: number): string {
   return 'fuel consumption was close to average';
 }
 
+/**
+ * Provide insight into driving distance compared to average.
+ *
+ * @param distance - Current distance value
+ * @param avg - Average distance value
+ * @returns Textual insight string
+ */
 export function distanceInsight(distance: number, avg: number): string {
   if (distance > avg * 1.1) return 'you drove a lot more than usual';
   if (distance < avg * 0.9) return 'you drove less than you normally do';
@@ -20,13 +31,20 @@ export function distanceInsight(distance: number, avg: number): string {
 }
 
 /**
- * Build summary block for yearly or monthly view
+ * Build summary block for yearly or monthly view.
+ *
+ * @param viewMode - Reactive mode ('yearly' or 'monthly')
+ * @param selectedYearRow - Reactive selected yearly stats row
+ * @param selectedMonthRow - Reactive selected monthly stats row
+ * @param currencyCode - Reactive currency code for formatting
+ *
+ * @returns summaryBlock - Computed summary object or null
  */
 export function useSummaryBlock(
-  viewMode: any,
-  selectedYearRow: any,
-  selectedMonthRow: any,
-  currencyCode: any
+  viewMode: Ref<'yearly' | 'monthly'>,
+  selectedYearRow: Ref<DetailedStats['yearly_stats'][0] | null>,
+  selectedMonthRow: Ref<DetailedStats['monthly_stats'][0] | null>,
+  currencyCode: Ref<string>
 ) {
   const store = useFuelStore();
   const detailedStats = computed<DetailedStats | null>(() => store.detailedStats ?? null);
@@ -35,6 +53,7 @@ export function useSummaryBlock(
     const ds = detailedStats.value;
     if (!ds) return null;
 
+    // Yearly summary
     if (viewMode.value === 'yearly' && selectedYearRow.value) {
       const row = selectedYearRow.value;
       const avgAllYears =
@@ -52,6 +71,7 @@ export function useSummaryBlock(
       };
     }
 
+    // Monthly summary
     if (viewMode.value === 'monthly' && selectedMonthRow.value) {
       const row = selectedMonthRow.value;
       const yearKey = row.period_label.slice(0, 4);
@@ -83,21 +103,27 @@ export function useSummaryBlock(
 
 /**
  * Build yearly and monthly labels from detailed stats.
+ *
+ * @param detailedStats - Reactive DetailedStats object
+ * @returns yearlyLabels and monthlyLabels as computed arrays
  */
-export function usePeriodLabels(detailedStats: any) {
+export function usePeriodLabels(detailedStats: Ref<DetailedStats | null>) {
   const yearlyLabels = computed(() =>
-    detailedStats.value?.yearly_stats.map((y: any) => y.period_label).reverse() ?? []
+    detailedStats.value?.yearly_stats.map(y => y.period_label).reverse() ?? []
   );
   const monthlyLabels = computed(() =>
-    detailedStats.value?.monthly_stats.map((m: any) => m.period_label).reverse() ?? []
+    detailedStats.value?.monthly_stats.map(m => m.period_label).reverse() ?? []
   );
   return { yearlyLabels, monthlyLabels };
 }
 
 /**
  * Compute header text showing first and last year in stats.
+ *
+ * @param detailedStats - Reactive DetailedStats object
+ * @returns Header string with period range
  */
-export function computeHeaderPeriodLabel(detailedStats: any): string {
+export function computeHeaderPeriodLabel(detailedStats: Ref<DetailedStats | null>): string {
   const ds = detailedStats.value;
   if (!ds) return 'Period: —';
   const firstYear = ds.yearly_stats[0]?.period_label ?? '—';
@@ -107,7 +133,11 @@ export function computeHeaderPeriodLabel(detailedStats: any): string {
 
 /**
  * Get entries for a given month key.
+ *
+ * @param entries - Array of FuelEntryDB items
+ * @param monthKey - Month key string (e.g. "2025-11")
+ * @returns Filtered and reversed entries for that month
  */
-export function getEntriesForMonth(entries: any[], monthKey: string) {
+export function getEntriesForMonth(entries: FuelEntryDB[], monthKey: string): FuelEntryDB[] {
   return entries.filter(e => e.date?.startsWith(monthKey)).reverse();
 }

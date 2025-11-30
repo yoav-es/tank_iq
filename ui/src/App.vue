@@ -50,7 +50,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useLayoutStore } from './stores/layout-store';
+import { useLayoutStore } from './stores/layoutStore';
 
 const appTitle = 'TankIQ';
 const layoutStore = useLayoutStore();
@@ -91,6 +91,7 @@ function toggleDarkMode(): void {
   flex-direction: column;
   min-height: 100vh;
 }
+
 .app-layout {
   flex: 1;
   display: grid;
@@ -139,7 +140,7 @@ function toggleDarkMode(): void {
 
 .sidebar__link--active {
   background-color: var(--color-secondary);
-  color: var(--color-surface-strong, #111827);
+  color: var(--color-text-strong); /* fixed: use defined token */
   font-weight: 600;
 }
 
@@ -150,7 +151,7 @@ function toggleDarkMode(): void {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  padding-bottom: 48px;
+  padding-bottom: var(--space-xl); /* use token instead of hard-coded 48px */
 }
 
 .content--no-scroll {
@@ -168,38 +169,33 @@ function toggleDarkMode(): void {
   border-top: 1px solid var(--color-border);
 
   display: flex;
-  justify-content: center; /* center everything together */
-  gap: var(--space-md);    
-  align-items: center;              /* vertical centering */
-  padding: 0 var(--space-md);       /* horizontal breathing room */
-  height: 36px;                     /* slightly taller for comfort */
+  justify-content: center;
+  gap: var(--space-md);
+  align-items: center;
+  padding: 0 var(--space-md);
   font-size: var(--font-size-sm);
-  box-shadow: 0 -2px 4px rgba(0,0,0,0.05); /* subtle shadow for depth */
+  box-shadow: var(--shadow-sm); /* use token */
 }
 
 .footer__brand {
   font-weight: 500;
   color: var(--color-text);
-  opacity: 0.8;                     /* softer look */
+  opacity: 0.8;
 }
 
 .footer__button {
-  background-color: var(--color-secondary);
-  color: #fff;
-  border-radius: var(--radius-sm);
-  padding: var(--space-xs) var(--space-md);
+  /* reuse global button styles */
+  @apply button button--secondary;
   font-size: var(--font-size-sm);
   font-weight: 500;
-  cursor: pointer;
-  transition: background-color var(--transition-fast),
-              transform var(--transition-fast);
+  padding: var(--space-xs) var(--space-md);
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
 }
 
 .footer__button:hover {
   background-color: var(--color-secondary-hover);
-  transform: translateY(-1px);      /* subtle lift on hover */
+  transform: translateY(-1px);
 }
-
 
 /* Responsive */
 @media (max-width: 768px) {

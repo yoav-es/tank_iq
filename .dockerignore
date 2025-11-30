@@ -1,4 +1,16 @@
 __pycache__/
 *.pyc
-.git/
+*.pyo
+*.pyd
 .env
+.env.*
+.venv/
+venv/
+dist/
+build/
+node_modules/
+ui/node_modules/
+tests/
+fuel_log.db
+.git/
+.gitignore

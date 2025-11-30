@@ -1,0 +1,20 @@
+version: "3.9"
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend.dockerfile   # your frontend Dockerfile
+    ports:
+      - "80:80"                         # serve frontend at http://localhost
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend.dockerfile    # your backend Dockerfile
+    ports:
+      - "8000:8000"                     # backend API at http://localhost:8000
+    volumes:
+      - ./data:/app/data                # optional: persist database file outside container
