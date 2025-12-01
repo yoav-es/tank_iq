@@ -34,6 +34,6 @@ EXPOSE 8000
 # 9) Default command: run FastAPI via Uvicorn
 CMD ["uvicorn", "app.server:app", "--host", "0.0.0.0", "--port", "8000"]
 
-# Healthcheck for backend (requires a /health endpoint in FastAPI)
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8000/health || exit 1
+# # Healthcheck for backend (requires a /health endpoint in FastAPI)
+# HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+#   CMD curl -f http://localhost:8000/health || exit 1
