@@ -9,49 +9,6 @@ This project follows:
 
 ---
 
-## Project structure – TankIQ
-
-TankIQ/  
-&nbsp;&nbsp;app/                         # Core backend application logic  
-&nbsp;&nbsp;&nbsp;&nbsp;__init__.py                # Initializes the app package  
-&nbsp;&nbsp;&nbsp;&nbsp;models.py                  # Pydantic schemas for entries and statistics  
-&nbsp;&nbsp;&nbsp;&nbsp;database.py                # SQLite connection, schema initialization, CRUD operations  
-&nbsp;&nbsp;&nbsp;&nbsp;api.py                     # FastAPI router (CRUD, stats, CSV export)  
-&nbsp;&nbsp;&nbsp;&nbsp;server.py                  # FastAPI app init, logging, lifespan, CORS middleware  
-&nbsp;&nbsp;&nbsp;&nbsp;utils.py                   # Calculations, statistics, CSV conversion  
-
-&nbsp;&nbsp;tests/                       # Unit, integration, and functional tests  
-&nbsp;&nbsp;&nbsp;&nbsp;test_utils.py              # Utility function tests  
-&nbsp;&nbsp;&nbsp;&nbsp;test_models.py             # Pydantic schema validation tests  
-&nbsp;&nbsp;&nbsp;&nbsp;test_database.py           # SQLite DB initialization and operations  
-&nbsp;&nbsp;&nbsp;&nbsp;test_api.py                # FastAPI endpoints: CRUD, stats, export  
-
-&nbsp;&nbsp;ui/                          # Vue 3 frontend  
-&nbsp;&nbsp;&nbsp;&nbsp;src/  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;assets/                  # Static images, icons, styles  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;components/              # Reusable Vue components  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ChartCard.vue          # Chart wrapper  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SummaryBlock.vue       # Summary stats display  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;InsightBlock.vue       # Efficiency/distance insights  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;composables/             # Reusable logic (Vue composables)  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;useChart.ts            # Chart.js helpers (labels, datasets, options, init/update)  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;useStats.ts            # Stats helpers (insights, summary, labels)  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;useFormat.ts           # Formatting utilities (currency, dates)  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;stores/                  # Pinia stores  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fuelStore.ts           # Fuel entries, stats, persistence  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;types/                   # TypeScript interfaces/types  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FuelEntry.ts           # DetailedStats, FuelEntry, Stat types  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;views/                   # Page-level components  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DashboardView.vue      # Overview charts (monthly/yearly aggregates)  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;StatsView.vue          # Detailed stats (yearly/monthly + histogram)  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;router/                  # Vue Router setup  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;index.ts  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;App.vue                  # Root component  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;main.ts                  # App entry point  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;style.css                # Global styles  
-&nbsp;&nbsp;&nbsp;&nbsp;package.json  
-&nbsp;&nbsp;&nbsp;&nbsp;tsconfig.json  
-&nbsp;&nbsp;&nbsp;&nbsp;vite.config.ts  
 
 &nbsp;&nbsp;fuel_log.db                  # SQLite database  
 &nbsp;&nbsp;main.py                      # Entry point to run the FastAPI app  
